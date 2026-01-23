@@ -43,7 +43,9 @@ export async function GET(
       similar: [] as any[],
     }
 
-    relations?.forEach((relation) => {
+    // 타입 단언으로 타입 에러 해결
+    const relationsData = (relations || []) as any[]
+    relationsData.forEach((relation: any) => {
       const type = relation.relation_type as keyof typeof grouped
       if (grouped[type]) {
         grouped[type].push(relation.related_kit)
