@@ -1,64 +1,28 @@
-// src/app/api/kits/[id]/related/route.ts
-// 관련 건담 킷 조회 API
+// src/app/auth/callback/route.ts
+// Google OAuth 콜백 처리
 
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import { NextResponse } from 'next/server'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request) {
   try {
-    const supabase = createClient()
-    const { id } = params
+    const requestUrl = new URL(request.url)
+    const code = requestUrl.searchParams.get('code')
 
-    // 킷의 관계 정보 조회
-    const { data: relations, error: relationsError } = await supabase
-      .from('kit_relations')
-      .select(`
-        relation_type,
-        related_kit:gundam_kits!kit_relations_related_kit_id_fkey(
-          *,
-          grade:grades(*),
-          brand:brands(*),
-          series:series(*),
-          primary_image:kit_images(*)
-        )
-      `)
-      .eq('kit_id', id)
-      .eq('gundam_kits.status', 'active')
-
-    if (relationsError) {
-      console.error('Database error:', relationsError)
-      return NextResponse.json(
-        { error: 'Failed to fetch related kits' },
-        { status: 500 }
-      )
+    if (code) {
+      const cookieStore = await cookies()
+      const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+      await supabase.auth.exchangeCodeForSession(code)
     }
 
-    // 관계 타입별로 그룹화
-    const grouped = {
-      variant: [] as any[],
-      series: [] as any[],
-      similar: [] as any[],
-    }
-
-    relations?.forEach((relation) => {
-      const type = relation.relation_type as keyof typeof grouped
-      if (grouped[type]) {
-        grouped[type].push(relation.related_kit)
-      }
-    })
-
-    return NextResponse.json({
-      data: grouped,
-      error: null,
-    })
+    // 로그인 성공 후 메인 페이지로 리다이렉트
+    return NextResponse.redirect(requestUrl.origin)
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    console.error('Auth callback error:', error)
+    // 에러가 나도 메인 페이지로 리다이렉트
+    return NextResponse.redirect(new URL('/', request.url))
   }
 }
+
+export const dynamic = 'force-dynamic'
