@@ -99,20 +99,37 @@ export default function KitDetailPage() {
           <div className="space-y-4">
             {/* 메인 이미지 */}
             <div className="aspect-square bg-secondary rounded-2xl overflow-hidden">
-              {kit.images?.[0]?.image_url ? (
-                <img
-                  src={kit.images[0].image_url}
-                  alt={kit.name_ko}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                  <div className="text-center">
-                    <div className="text-9xl mb-4">🤖</div>
-                    <div>이미지 없음</div>
+              {(() => {
+                // 1순위: box_art_url
+                if (kit.box_art_url) {
+                  return (
+                    <img
+                      src={kit.box_art_url}
+                      alt={kit.name_ko}
+                      className="w-full h-full object-cover"
+                    />
+                  )
+                }
+                // 2순위: kit_images
+                if (kit.images?.[0]?.image_url) {
+                  return (
+                    <img
+                      src={kit.images[0].image_url}
+                      alt={kit.name_ko}
+                      className="w-full h-full object-cover"
+                    />
+                  )
+                }
+                // 없으면 기본 아이콘
+                return (
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                    <div className="text-center">
+                      <div className="text-9xl mb-4">🤖</div>
+                      <div>이미지 없음</div>
+                    </div>
                   </div>
-                </div>
-              )}
+                )
+              })()}
             </div>
 
             {/* 썸네일 이미지들 */}
@@ -138,7 +155,7 @@ export default function KitDetailPage() {
           <div className="space-y-6">
             {/* 제목 영역 */}
             <div>
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
                 {kit.grade && (
                   <span className="px-3 py-1 bg-primary/10 text-primary rounded-lg font-bold text-sm">
                     {kit.grade.code}
@@ -147,6 +164,18 @@ export default function KitDetailPage() {
                 {kit.brand && (
                   <span className="px-3 py-1 bg-secondary text-foreground rounded-lg text-sm">
                     {kit.brand.name}
+                  </span>
+                )}
+                {/* 진영 뱃지 */}
+                {kit.mobile_suit?.faction && (
+                  <span className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-lg text-sm font-medium">
+                    {kit.mobile_suit.faction}
+                  </span>
+                )}
+                {/* 조직 뱃지 */}
+                {kit.mobile_suit?.organization && (
+                  <span className="px-3 py-1 bg-purple-500/20 text-purple-400 rounded-lg text-sm">
+                    {kit.mobile_suit.organization}
                   </span>
                 )}
                 {kit.is_pbandai && (
@@ -200,7 +229,74 @@ export default function KitDetailPage() {
                   <span className="font-medium">{kit.product_code}</span>
                 </div>
               )}
+
+              {kit.jan_code && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">JAN 코드</span>
+                  <span className="font-mono text-sm font-medium">{kit.jan_code}</span>
+                </div>
+              )}
             </div>
+
+            {/* 상세 사양 */}
+            {kit.specifications && Object.keys(kit.specifications).length > 0 && (
+              <div className="card-threads">
+                <h3 className="font-bold mb-3 flex items-center gap-2">
+                  <span>📦</span>
+                  <span>제품 사양</span>
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {kit.specifications.runner_sheets && (
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">러너</div>
+                      <div className="font-medium">{kit.specifications.runner_sheets}장</div>
+                    </div>
+                  )}
+                  {kit.specifications.parts_count && (
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">부품 수</div>
+                      <div className="font-medium">{kit.specifications.parts_count}개</div>
+                    </div>
+                  )}
+                  {kit.specifications.manual_pages && (
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">설명서</div>
+                      <div className="font-medium">{kit.specifications.manual_pages}페이지</div>
+                    </div>
+                  )}
+                  {kit.specifications.poly_caps && (
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">폴리캡</div>
+                      <div className="font-medium text-sm">{kit.specifications.poly_caps}</div>
+                    </div>
+                  )}
+                </div>
+                {kit.specifications.stickers && Array.isArray(kit.specifications.stickers) && kit.specifications.stickers.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-border">
+                    <div className="text-xs text-muted-foreground mb-2">스티커</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {kit.specifications.stickers.map((sticker: string, index: number) => (
+                        <span key={index} className="px-2 py-1 bg-secondary rounded text-xs">
+                          {sticker}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {kit.specifications.special_parts && Array.isArray(kit.specifications.special_parts) && kit.specifications.special_parts.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-border">
+                    <div className="text-xs text-muted-foreground mb-2">특수 부품</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {kit.specifications.special_parts.map((part: string, index: number) => (
+                        <span key={index} className="px-2 py-1 bg-primary/10 text-primary rounded text-xs">
+                          {part}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* 가격 */}
             <div className="card-threads bg-primary/5 border-primary/20">

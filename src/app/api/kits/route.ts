@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
         kit_images!kit_images_kit_id_fkey(image_url, is_primary)
       `, { count: 'exact' })
       .eq('status', 'active')
+      .is('deleted_at', null)  // Soft Delete 필터
 
     // 필터 적용
     if (filters.grade && filters.grade.length > 0) {

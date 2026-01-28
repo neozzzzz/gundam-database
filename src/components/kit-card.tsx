@@ -22,20 +22,37 @@ export function KitCard({ kit }: KitCardProps) {
       <div className="card-threads group cursor-pointer">
         {/* 이미지 영역 */}
         <div className="relative aspect-square mb-4 bg-secondary rounded-xl overflow-hidden">
-          {primaryImage?.image_url ? (
-            <img
-              src={primaryImage.image_url}
-              alt={kit.name_ko}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-              <div className="text-center">
-                <div className="text-6xl mb-2">🤖</div>
-                <div className="text-sm">이미지 없음</div>
+          {(() => {
+            // 1순위: box_art_url
+            if (kit.box_art_url) {
+              return (
+                <img
+                  src={kit.box_art_url}
+                  alt={kit.name_ko}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              )
+            }
+            // 2순위: kit_images
+            if (primaryImage?.image_url) {
+              return (
+                <img
+                  src={primaryImage.image_url}
+                  alt={kit.name_ko}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              )
+            }
+            // 없으면 기본 아이콘
+            return (
+              <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                <div className="text-center">
+                  <div className="text-6xl mb-2">🤖</div>
+                  <div className="text-sm">이미지 없음</div>
+                </div>
               </div>
-            </div>
-          )}
+            )
+          })()}
           
           {/* P-BANDAI 뱃지 */}
           {kit.is_pbandai && (
@@ -47,12 +64,19 @@ export function KitCard({ kit }: KitCardProps) {
 
         {/* 정보 영역 */}
         <div className="space-y-2">
-          {/* 등급 & 브랜드 */}
+          {/* 등급 & 스케일 & 브랜드 */}
           <div className="flex items-center gap-2 text-sm">
             {kit.grade && (
-              <span className="px-2 py-1 bg-primary/10 text-primary rounded-md font-semibold">
-                {kit.grade.code}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="px-2 py-1 bg-primary/10 text-primary rounded-md font-semibold">
+                  {kit.grade.code}
+                </span>
+                {kit.grade.scale && (
+                  <span className="px-2 py-1 bg-secondary text-foreground rounded-md font-medium text-xs">
+                    {kit.grade.scale}
+                  </span>
+                )}
+              </div>
             )}
             {kit.brand && (
               <span className="text-muted-foreground">

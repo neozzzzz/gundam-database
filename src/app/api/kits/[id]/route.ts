@@ -154,10 +154,13 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // 킷 상태를 'discontinued'로 변경 (소프트 삭제)
+    // 킷 삭제 (Soft Delete: deleted_at 설정)
     const { data, error } = await supabase
       .from('gundam_kits')
-      .update({ status: 'discontinued' })
+      .update({ 
+        status: 'discontinued',
+        deleted_at: new Date().toISOString()  // Soft Delete
+      })
       .eq('id', id)
       .select()
       .single()
