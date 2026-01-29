@@ -110,9 +110,7 @@ export default function KitsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* 왼쪽: 필터 사이드바 */}
           <aside className="lg:col-span-1">
-            <div className="lg:sticky lg:top-24">
-              <FilterPanel onFilterChange={handleFilterChange} />
-            </div>
+            <FilterPanel onFilterChange={handleFilterChange} />
           </aside>
 
           {/* 오른쪽: 메인 컨텐츠 */}
@@ -132,14 +130,6 @@ export default function KitsPage() {
               />
             </div>
 
-            {/* 로딩 상태 */}
-            {loading && (
-              <div className="text-center py-20">
-                <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
-                <p className="mt-4 text-muted-foreground">로딩 중...</p>
-              </div>
-            )}
-
             {/* 에러 상태 */}
             {error && (
               <div className="card-threads bg-red-900/20 border-red-900 text-center py-8">
@@ -149,49 +139,62 @@ export default function KitsPage() {
             )}
 
             {/* 킷 목록 */}
-            {!loading && !error && (
-              <>
-                <div className="mb-6 flex items-center justify-between">
-                  <span className="text-muted-foreground">
-                    총 {totalItems}개의 모델
-                  </span>
-                  {searchQuery && (
-                    <span className="text-primary">
-                      "{searchQuery}" 검색 결과
-                    </span>
-                  )}
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {kits.map((kit) => (
-                    <KitCard key={kit.id} kit={kit} />
-                  ))}
-                </div>
-
-                {/* 빈 상태 */}
-                {kits.length === 0 && (
-                  <div className="text-center py-20">
-                    <div className="text-6xl mb-4">🔍</div>
-                    <p className="text-xl font-bold mb-2">
-                      검색 결과가 없습니다
-                    </p>
-                    <p className="text-muted-foreground">
-                      다른 검색어나 필터를 시도해보세요
-                    </p>
+            {!error && (
+              <div className="relative min-h-[400px]">
+                {/* 로딩 오버레이 */}
+                {loading && (
+                  <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+                    <div className="text-center">
+                      <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+                      <p className="mt-4 text-white">로딩 중...</p>
+                    </div>
                   </div>
                 )}
 
-                {/* 페이지네이션 */}
-                {kits.length > 0 && (
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    totalItems={totalItems}
-                    itemsPerPage={itemsPerPage}
-                    onPageChange={handlePageChange}
-                  />
-                )}
-              </>
+                {/* 콘텐츠 */}
+                <div className={loading ? 'opacity-50 pointer-events-none' : ''}>
+                  <div className="mb-6 flex items-center justify-between">
+                    <span className="text-muted-foreground">
+                      총 {totalItems}개의 모델
+                    </span>
+                    {searchQuery && (
+                      <span className="text-primary">
+                        "{searchQuery}" 검색 결과
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {kits.map((kit) => (
+                      <KitCard key={kit.id} kit={kit} />
+                    ))}
+                  </div>
+
+                  {/* 빈 상태 */}
+                  {kits.length === 0 && !loading && (
+                    <div className="text-center py-20">
+                      <div className="text-6xl mb-4">🔍</div>
+                      <p className="text-xl font-bold mb-2">
+                        검색 결과가 없습니다
+                      </p>
+                      <p className="text-muted-foreground">
+                        다른 검색어나 필터를 시도해보세요
+                      </p>
+                    </div>
+                  )}
+
+                  {/* 페이지네이션 */}
+                  {kits.length > 0 && (
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      totalItems={totalItems}
+                      itemsPerPage={itemsPerPage}
+                      onPageChange={handlePageChange}
+                    />
+                  )}
+                </div>
+              </div>
             )}
           </main>
         </div>

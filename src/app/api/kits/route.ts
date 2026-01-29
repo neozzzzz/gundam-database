@@ -41,11 +41,28 @@ export async function GET(request: NextRequest) {
 
     // 필터 적용
     if (filters.grade && filters.grade.length > 0) {
-      query = query.in('grade.code', filters.grade)
+      // grade_id로 필터링하기 위해 먼저 grade code에 해당하는 ID 조회
+      const { data: gradesData } = await supabase
+        .from('grades')
+        .select('id')
+        .in('code', filters.grade)
+      
+      if (gradesData && gradesData.length > 0) {
+        const gradeIds = gradesData.map(g => g.id)
+        query = query.in('grade_id', gradeIds)
+      }
     }
 
     if (filters.brand && filters.brand.length > 0) {
-      query = query.in('brand.code', filters.brand)
+      const { data: brandsData } = await supabase
+        .from('brands')
+        .select('id')
+        .in('code', filters.brand)
+      
+      if (brandsData && brandsData.length > 0) {
+        const brandIds = brandsData.map(b => b.id)
+        query = query.in('brand_id', brandIds)
+      }
     }
 
     if (filters.series && filters.series.length > 0) {

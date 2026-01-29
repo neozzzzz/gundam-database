@@ -148,7 +148,7 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
               <button
                 type="button"
                 onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
-                className="w-full flex items-center justify-between px-4 py-3 bg-secondary border border-border rounded-xl text-foreground hover:bg-accent transition-colors"
+                className="w-full flex items-center justify-between px-4 py-3 bg-[#2a2a2a] border border-border rounded-xl text-foreground hover:bg-accent transition-colors"
               >
                 <span>{sortOptions.find(opt => opt.value === sortBy)?.label}</span>
                 <svg
@@ -163,7 +163,7 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
 
               {/* 드롭다운 메뉴 */}
               {isSortDropdownOpen && (
-                <div className="absolute z-50 w-full mt-1 py-1 bg-[#2a2a2a] border border-border rounded-xl shadow-lg overflow-hidden">
+                <div className="absolute z-50 w-full mt-1 py-1 bg-card border border-border rounded-xl shadow-lg overflow-hidden">
                   {sortOptions.map((option) => (
                     <button
                       key={option.value}

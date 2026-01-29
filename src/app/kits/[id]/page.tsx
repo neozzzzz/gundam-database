@@ -1,48 +1,37 @@
-// src/app/kits/[id]/page.tsx
-// 건담 킷 상세 페이지
-
+// app/kits/[id]/page.tsx
 'use client'
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { RelatedKits } from '@/components/related-kits'
-import type { KitWithDetails } from '@/lib/types'
 
 export default function KitDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const [kit, setKit] = useState<KitWithDetails | null>(null)
+  const [kit, setKit] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    async function fetchKit() {
+      try {
+        const response = await fetch(`/api/kits/${params.id}`)
+        if (!response.ok) {
+          throw new Error('Failed to fetch kit')
+        }
+        const data = await response.json()
+        console.log('Kit data:', data)
+        setKit(data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error')
+      } finally {
+        setLoading(false)
+      }
+    }
+
     if (params.id) {
-      fetchKit(params.id as string)
+      fetchKit()
     }
   }, [params.id])
-
-  async function fetchKit(id: string) {
-    try {
-      setLoading(true)
-      const response = await fetch(`/api/kits/${id}`)
-      
-      if (!response.ok) {
-        throw new Error('킷 정보를 불러오는데 실패했습니다')
-      }
-
-      const result = await response.json()
-      // kit_images를 images로 변환 (하위 호환성)
-      const kitData = result.data
-      if (kitData.kit_images) {
-        kitData.images = kitData.kit_images
-      }
-      setKit(kitData)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '오류가 발생했습니다')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   if (loading) {
     return (
@@ -72,6 +61,14 @@ export default function KitDetailPage() {
     )
   }
 
+  // 이미지 가져오기
+  const images = kit.kit_images || []
+  const primaryImage = images.find((img: any) => img.is_primary) || images[0]
+  const imageUrl = kit.box_art_url || primaryImage?.image_url
+
+  // 모빌슈트 정보
+  const mobileSuit = kit.mobile_suits || kit.mobile_suit
+
   return (
     <div className="min-h-screen">
       {/* 헤더 */}
@@ -99,45 +96,29 @@ export default function KitDetailPage() {
           <div className="space-y-4">
             {/* 메인 이미지 */}
             <div className="aspect-square bg-secondary rounded-2xl overflow-hidden">
-              {(() => {
-                // 1순위: box_art_url
-                if (kit.box_art_url) {
-                  return (
-                    <img
-                      src={kit.box_art_url}
-                      alt={kit.name_ko}
-                      className="w-full h-full object-cover"
-                    />
-                  )
-                }
-                // 2순위: kit_images
-                if (kit.images?.[0]?.image_url) {
-                  return (
-                    <img
-                      src={kit.images[0].image_url}
-                      alt={kit.name_ko}
-                      className="w-full h-full object-cover"
-                    />
-                  )
-                }
-                // 없으면 기본 아이콘
-                return (
-                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                    <div className="text-center">
-                      <div className="text-9xl mb-4">🤖</div>
-                      <div>이미지 없음</div>
-                    </div>
-                  </div>
-                )
-              })()}
+              {imageUrl ? (
+                <img
+                  src={imageUrl}
+                  alt={kit.name_ko}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-secondary">
+                  <img 
+                    src="/no-image.png" 
+                    alt="이미지 없음"
+                    className="w-2/5 h-2/5 object-contain invert opacity-30"
+                  />
+                </div>
+              )}
             </div>
 
             {/* 썸네일 이미지들 */}
-            {kit.images && kit.images.length > 1 && (
+            {images.length > 1 && (
               <div className="grid grid-cols-4 gap-4">
-                {kit.images.slice(0, 4).map((image, index) => (
+                {images.slice(0, 4).map((image: any, index: number) => (
                   <div
-                    key={image.id}
+                    key={index}
                     className="aspect-square bg-secondary rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
                   >
                     <img
@@ -156,28 +137,43 @@ export default function KitDetailPage() {
             {/* 제목 영역 */}
             <div>
               <div className="flex items-center gap-2 mb-3 flex-wrap">
-                {kit.grade && (
+                {/* Grade 뱃지 */}
+                {kit.grades && (
                   <span className="px-3 py-1 bg-primary/10 text-primary rounded-lg font-bold text-sm">
-                    {kit.grade.code}
+                    {kit.grades.code || kit.grades.name_ko || kit.grades.name}
                   </span>
                 )}
+                {/* Scale 뱃지 */}
+                {kit.grades?.scale && (
+                  <span className="px-3 py-1 bg-primary/10 text-primary rounded-lg font-bold text-sm">
+                    {kit.grades.scale}
+                  </span>
+                )}
+                {/* Series 뱃지 */}
+                {kit.series && (
+                  <span className="px-3 py-1 bg-primary/10 text-primary rounded-lg font-bold text-sm">
+                    {kit.series.name_ko || kit.series.name}
+                  </span>
+                )}
+                {/* Brand 뱃지 */}
                 {kit.brand && (
                   <span className="px-3 py-1 bg-secondary text-foreground rounded-lg text-sm">
-                    {kit.brand.name}
+                    {kit.brand.name_ko || kit.brand.name}
                   </span>
                 )}
                 {/* 진영 뱃지 */}
-                {kit.mobile_suit?.faction && (
+                {mobileSuit?.factions && (
                   <span className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-lg text-sm font-medium">
-                    {kit.mobile_suit.faction}
+                    {mobileSuit.factions.name_ko || mobileSuit.factions.name}
                   </span>
                 )}
                 {/* 조직 뱃지 */}
-                {kit.mobile_suit?.organization && (
+                {mobileSuit?.organizations && (
                   <span className="px-3 py-1 bg-purple-500/20 text-purple-400 rounded-lg text-sm">
-                    {kit.mobile_suit.organization}
+                    {mobileSuit.organizations.name_ko || mobileSuit.organizations.name}
                   </span>
                 )}
+                {/* P-BANDAI 뱃지 */}
                 {kit.is_pbandai && (
                   <span className="px-3 py-1 bg-red-600 text-white rounded-lg font-bold text-sm">
                     P-BANDAI
@@ -193,27 +189,6 @@ export default function KitDetailPage() {
 
             {/* 기본 정보 */}
             <div className="card-threads space-y-3">
-              {kit.series && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">시리즈</span>
-                  <span className="font-medium">{kit.series.name_ko}</span>
-                </div>
-              )}
-              
-              {kit.mobile_suit && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">기체</span>
-                  <span className="font-medium">{kit.mobile_suit.name_ko}</span>
-                </div>
-              )}
-
-              {kit.scale && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">스케일</span>
-                  <span className="font-medium">{kit.scale}</span>
-                </div>
-              )}
-
               {kit.release_date && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">출시일</span>
@@ -223,10 +198,10 @@ export default function KitDetailPage() {
                 </div>
               )}
 
-              {kit.product_code && (
+              {kit.bandai_product_code && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">제품 코드</span>
-                  <span className="font-medium">{kit.product_code}</span>
+                  <span className="font-medium">{kit.bandai_product_code}</span>
                 </div>
               )}
 
@@ -238,61 +213,63 @@ export default function KitDetailPage() {
               )}
             </div>
 
-            {/* 상세 사양 */}
-            {kit.specifications && Object.keys(kit.specifications).length > 0 && (
+            {/* 모빌슈트 상세 정보 */}
+            {mobileSuit && (
               <div className="card-threads">
                 <h3 className="font-bold mb-3 flex items-center gap-2">
-                  <span>📦</span>
-                  <span>제품 사양</span>
+                  <span>🤖</span>
+                  <span>모빌슈트 정보</span>
                 </h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {kit.specifications.runner_sheets && (
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">러너</div>
-                      <div className="font-medium">{kit.specifications.runner_sheets}장</div>
+                <div className="space-y-3">
+                  {/* 기체명 */}
+                  {(mobileSuit.name_ko || mobileSuit.name) && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">기체명</span>
+                      <span className="font-medium">{mobileSuit.name_ko || mobileSuit.name}</span>
                     </div>
                   )}
-                  {kit.specifications.parts_count && (
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">부품 수</div>
-                      <div className="font-medium">{kit.specifications.parts_count}개</div>
+                  {/* 영문명 */}
+                  {mobileSuit.name_en && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">영문명</span>
+                      <span className="font-medium text-muted-foreground">{mobileSuit.name_en}</span>
                     </div>
                   )}
-                  {kit.specifications.manual_pages && (
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">설명서</div>
-                      <div className="font-medium">{kit.specifications.manual_pages}페이지</div>
+                  {/* 모델 넘버 */}
+                  {mobileSuit.model_number && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">모델 넘버</span>
+                      <span className="font-mono text-blue-400 font-medium">{mobileSuit.model_number}</span>
                     </div>
                   )}
-                  {kit.specifications.poly_caps && (
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">폴리캡</div>
-                      <div className="font-medium text-sm">{kit.specifications.poly_caps}</div>
+                  {/* 파일럿 */}
+                  {mobileSuit.pilot && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">파일럿</span>
+                      <span className="font-medium">{mobileSuit.pilot}</span>
+                    </div>
+                  )}
+                  {/* 전고 */}
+                  {mobileSuit.height && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">전고</span>
+                      <span className="font-medium">{mobileSuit.height}</span>
+                    </div>
+                  )}
+                  {/* 중량 */}
+                  {mobileSuit.weight && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">중량</span>
+                      <span className="font-medium">{mobileSuit.weight}</span>
                     </div>
                   )}
                 </div>
-                {kit.specifications.stickers && Array.isArray(kit.specifications.stickers) && kit.specifications.stickers.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-border">
-                    <div className="text-xs text-muted-foreground mb-2">스티커</div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {kit.specifications.stickers.map((sticker: string, index: number) => (
-                        <span key={index} className="px-2 py-1 bg-secondary rounded text-xs">
-                          {sticker}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {kit.specifications.special_parts && Array.isArray(kit.specifications.special_parts) && kit.specifications.special_parts.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-border">
-                    <div className="text-xs text-muted-foreground mb-2">특수 부품</div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {kit.specifications.special_parts.map((part: string, index: number) => (
-                        <span key={index} className="px-2 py-1 bg-primary/10 text-primary rounded text-xs">
-                          {part}
-                        </span>
-                      ))}
-                    </div>
+                {/* 설명 */}
+                {mobileSuit.description && (
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      {mobileSuit.description}
+                    </p>
                   </div>
                 )}
               </div>
@@ -309,9 +286,9 @@ export default function KitDetailPage() {
                   }
                 </span>
               </div>
-              {kit.price_jpy && (
+              {kit.msrp_price && (
                 <div className="text-sm text-muted-foreground mt-2">
-                  일본 가격: ¥{kit.price_jpy.toLocaleString()}
+                  일본 가격: ¥{kit.msrp_price.toLocaleString()}
                 </div>
               )}
             </div>
@@ -331,7 +308,7 @@ export default function KitDetailPage() {
               <div className="card-threads">
                 <h3 className="font-bold mb-3">구매하기</h3>
                 <div className="space-y-2">
-                  {kit.purchase_links.map((link) => (
+                  {kit.purchase_links.map((link: any) => (
                     <a
                       key={link.id}
                       href={link.url}
@@ -347,11 +324,6 @@ export default function KitDetailPage() {
               </div>
             )}
           </div>
-        </div>
-
-        {/* 관련 킷 섹션 */}
-        <div className="mt-12">
-          <RelatedKits kitId={kit.id} />
         </div>
       </div>
     </div>

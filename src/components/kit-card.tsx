@@ -43,13 +43,14 @@ export function KitCard({ kit }: KitCardProps) {
                 />
               )
             }
-            // 없으면 기본 아이콘
+            // 없으면 기본 아이콘 (50% → 40%)
             return (
-              <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                <div className="text-center">
-                  <div className="text-6xl mb-2">🤖</div>
-                  <div className="text-sm">이미지 없음</div>
-                </div>
+              <div className="w-full h-full flex items-center justify-center bg-secondary">
+                <img 
+                  src="/no-image.png" 
+                  alt="이미지 없음"
+                  className="w-2/5 h-2/5 object-contain invert opacity-30"
+                />
               </div>
             )
           })()}

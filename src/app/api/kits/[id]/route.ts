@@ -1,183 +1,125 @@
 // src/app/api/kits/[id]/route.ts
-// 건담 킷 상세 조회 API
-
-import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import type { KitWithDetails, ApiResponse } from '@/lib/types'
+import { NextResponse } from 'next/server'
 
 export async function GET(
-  request: NextRequest,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
     const supabase = createClient()
-    const { id } = params
-
-    // 킷 상세 정보 조회
-    const { data: kit, error: kitError } = await supabase
+    
+    // Step 1: 먼저 킷만 가져오기 (JOIN 없이)
+    const { data: kitOnly, error: kitError } = await supabase
       .from('gundam_kits')
-      .select(`
-        *,
-        grade:grades(*),
-        brand:brands(*),
-        series:series(*),
-        mobile_suit:mobile_suits(*),
-        kit_images!kit_images_kit_id_fkey(*),
-        purchase_links:purchase_links(
-          *,
-          store:stores(*)
-        )
-      `)
-      .eq('id', id)
+      .select('*')
+      .eq('id', params.id)
       .single()
 
     if (kitError) {
-      if (kitError.code === 'PGRST116') {
-        return NextResponse.json(
-          { error: 'Kit not found' },
-          { status: 404 }
-        )
+      console.error('Kit fetch error:', kitError)
+      return NextResponse.json(
+        { error: 'Kit not found', details: kitError },
+        { status: 404 }
+      )
+    }
+
+    if (!kitOnly) {
+      return NextResponse.json(
+        { error: 'Kit not found' },
+        { status: 404 }
+      )
+    }
+
+    // Step 2: grade 정보 가져오기
+    let gradeData = null
+    if (kitOnly.grade_id) {
+      const { data: grade } = await supabase
+        .from('grades')
+        .select('*')
+        .eq('id', kitOnly.grade_id)
+        .single()
+      gradeData = grade
+    }
+
+    // Step 3: series 정보 가져오기
+    let seriesData = null
+    if (kitOnly.series_id) {
+      const { data: series } = await supabase
+        .from('series')
+        .select('*')
+        .eq('id', kitOnly.series_id)
+        .single()
+      seriesData = series
+    }
+
+    // Step 4: brand 정보 가져오기
+    let brandData = null
+    if (kitOnly.brand_id) {
+      const { data: brand } = await supabase
+        .from('brands')
+        .select('*')
+        .eq('id', kitOnly.brand_id)
+        .single()
+      brandData = brand
+    }
+
+    // Step 5: mobile_suit 정보 가져오기
+    let mobileSuitData = null
+    if (kitOnly.mobile_suit_id) {
+      const { data: mobileSuit } = await supabase
+        .from('mobile_suits')
+        .select('*')
+        .eq('id', kitOnly.mobile_suit_id)
+        .single()
+      
+      if (mobileSuit) {
+        // Step 6: faction 정보 가져오기
+        let factionData = null
+        if (mobileSuit.faction_default_id) {
+          const { data: faction } = await supabase
+            .from('factions')
+            .select('*')
+            .eq('id', mobileSuit.faction_default_id)
+            .single()
+          factionData = faction
+        }
+        
+        mobileSuitData = {
+          ...mobileSuit,
+          factions: factionData
+        }
       }
-      console.error('Database error:', kitError)
-      return NextResponse.json(
-        { error: 'Failed to fetch kit details' },
-        { status: 500 }
-      )
     }
 
-    // 조회수 증가 (비동기로 실행, 응답에 영향 없음)
-    supabase
-      .from('gundam_kits')
-      .update({ view_count: (kit.view_count || 0) + 1 })
-      .eq('id', id)
-      .then()
-
-    const response: ApiResponse<KitWithDetails> = {
-      data: kit as KitWithDetails,
-      error: null,
+    // Step 7: kit_images 가져오기
+    let imagesData = []
+    const { data: images } = await supabase
+      .from('kit_images')
+      .select('*')
+      .eq('kit_id', params.id)
+      .order('is_primary', { ascending: false })
+    
+    if (images) {
+      imagesData = images
     }
 
-    return NextResponse.json(response)
+    // 최종 결과 조합
+    const result = {
+      ...kitOnly,
+      grades: gradeData,
+      series: seriesData,
+      brand: brandData,
+      mobile_suits: mobileSuitData,
+      kit_images: imagesData
+    }
+
+    return NextResponse.json(result)
+    
   } catch (error) {
-    console.error('API error:', error)
+    console.error('Kit detail API error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
-}
-
-// 관리자 전용: 킷 수정
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const supabase = createClient()
-    const { id } = params
-
-    // 사용자 인증 확인
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // 사용자 권한 확인
-    const { data: user } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    // 업데이트할 데이터
-    const body = await request.json()
-
-    // 킷 업데이트
-    const { data, error } = await supabase
-      .from('gundam_kits')
-      .update(body)
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Database error:', error)
-      return NextResponse.json(
-        { error: 'Failed to update kit' },
-        { status: 500 }
-      )
-    }
-
-    return NextResponse.json({ data, error: null })
-  } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
-}
-
-// 관리자 전용: 킷 삭제 (상태 변경)
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const supabase = createClient()
-    const { id } = params
-
-    // 사용자 인증 확인
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // 사용자 권한 확인
-    const { data: user } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    // 킷 삭제 (Soft Delete: deleted_at 설정)
-    const { data, error } = await supabase
-      .from('gundam_kits')
-      .update({ 
-        status: 'discontinued',
-        deleted_at: new Date().toISOString()  // Soft Delete
-      })
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Database error:', error)
-      return NextResponse.json(
-        { error: 'Failed to delete kit' },
-        { status: 500 }
-      )
-    }
-
-    return NextResponse.json({ data, error: null })
-  } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error },
       { status: 500 }
     )
   }

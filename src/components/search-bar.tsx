@@ -34,8 +34,8 @@ export function SearchBar({ onSearch, placeholder = '킷 이름 검색...' }: Se
       />
       
       {/* 검색 아이콘 */}
-      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
-        🔍
+      <div className="absolute left-4 top-1/2 -translate-y-1/2">
+        <img src="/search-icon.svg" alt="검색" className="w-5 h-5" />
       </div>
 
       {/* 지우기 버튼 */}
