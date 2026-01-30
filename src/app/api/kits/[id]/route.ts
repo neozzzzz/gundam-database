@@ -92,6 +92,17 @@ export async function GET(
       }
     }
 
+    // Step 6.5: limited_type 정보 가져오기
+    let limitedTypeData = null
+    if (kitOnly.limited_type_id) {
+      const { data: limitedType } = await supabase
+        .from('limited_types')
+        .select('*')
+        .eq('id', kitOnly.limited_type_id)
+        .single()
+      limitedTypeData = limitedType
+    }
+
     // Step 7: kit_images 가져오기
     let imagesData = []
     const { data: images } = await supabase
@@ -104,6 +115,37 @@ export async function GET(
       imagesData = images
     }
 
+    // Step 8: 관련 킷 가져오기
+    let relatedKitsData: any[] = []
+    const { data: relations } = await supabase
+      .from('kit_relations')
+      .select('related_kit_id, relation_type')
+      .eq('kit_id', params.id)
+    
+    if (relations && relations.length > 0) {
+      const relatedKitIds = relations.map(r => r.related_kit_id)
+      const { data: relatedKits } = await supabase
+        .from('gundam_kits')
+        .select(`
+          id, name_ko, name_en, box_art_url, price_krw,
+          grade:grades(code, scale),
+          series:series(name_ko)
+        `)
+        .in('id', relatedKitIds)
+        .is('deleted_at', null)
+      
+      if (relatedKits) {
+        // relation_type 정보 매핑
+        relatedKitsData = relatedKits.map(kit => {
+          const relation = relations.find(r => r.related_kit_id === kit.id)
+          return {
+            ...kit,
+            relation_type: relation?.relation_type
+          }
+        })
+      }
+    }
+
     // 최종 결과 조합
     const result = {
       ...kitOnly,
@@ -111,7 +153,9 @@ export async function GET(
       series: seriesData,
       brand: brandData,
       mobile_suits: mobileSuitData,
-      kit_images: imagesData
+      limited_type: limitedTypeData,
+      kit_images: imagesData,
+      related_kits: relatedKitsData
     }
 
     return NextResponse.json(result)

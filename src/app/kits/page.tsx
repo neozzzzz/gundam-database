@@ -39,6 +39,7 @@ export default function KitsPage() {
       if (filters.grade?.length) params.append('grade', filters.grade.join(','))
       if (filters.brand?.length) params.append('brand', filters.brand.join(','))
       if (filters.series?.length) params.append('series', filters.series.join(','))
+      if (filters.limitedTypes?.length) params.append('limitedTypes', filters.limitedTypes.join(','))
       if (filters.priceMin) params.append('priceMin', filters.priceMin.toString())
       if (filters.priceMax) params.append('priceMax', filters.priceMax.toString())
       if (filters.isPbandai !== undefined) params.append('isPbandai', filters.isPbandai.toString())
@@ -90,7 +91,7 @@ export default function KitsPage() {
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">
               <a href="/" className="hover:text-primary transition-colors">
-                Gundam Database
+                GUNDAM ARCHIVE
               </a>
             </h1>
             <div className="flex items-center gap-4">

@@ -9,7 +9,7 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Gundam Database - 건담 모델 데이터베이스',
+  title: 'GUNDAM ARCHIVE - 건담 모델 데이터베이스',
   description: '반다이 건담 모델 정보를 한눈에',
 }
 

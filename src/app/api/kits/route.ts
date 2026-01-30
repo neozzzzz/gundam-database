@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
       brand: searchParams.get('brand')?.split(','),
       series: searchParams.get('series')?.split(','),
       timeline: searchParams.get('timeline')?.split(','),
+      limitedTypes: searchParams.get('limitedTypes')?.split(','),
       priceMin: searchParams.get('priceMin') ? parseInt(searchParams.get('priceMin')!) : undefined,
       priceMax: searchParams.get('priceMax') ? parseInt(searchParams.get('priceMax')!) : undefined,
       isPbandai: searchParams.get('isPbandai') === 'true' ? true : undefined,
@@ -34,6 +35,7 @@ export async function GET(request: NextRequest) {
         grade:grades(*),
         brand:brands(*),
         series:series(*),
+        limited_type:limited_types(*),
         kit_images!kit_images_kit_id_fkey(image_url, is_primary)
       `, { count: 'exact' })
       .eq('status', 'active')
@@ -69,6 +71,11 @@ export async function GET(request: NextRequest) {
       query = query.in('series_id', filters.series)
     }
 
+    // 한정판 유형 필터 (새로운 방식)
+    if (filters.limitedTypes && filters.limitedTypes.length > 0) {
+      query = query.in('limited_type_id', filters.limitedTypes)
+    }
+
     if (filters.priceMin !== undefined) {
       query = query.gte('price_krw', filters.priceMin)
     }
@@ -77,6 +84,7 @@ export async function GET(request: NextRequest) {
       query = query.lte('price_krw', filters.priceMax)
     }
 
+    // 기존 isPbandai 필터 (하위 호환성)
     if (filters.isPbandai !== undefined) {
       query = query.eq('is_pbandai', filters.isPbandai)
     }

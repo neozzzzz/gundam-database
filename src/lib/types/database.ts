@@ -34,6 +34,8 @@ export interface Database {
           name_ja: string | null
           year_start: number | null
           year_end: number | null
+          media_type: string | null  // ✅ V1.5: 형태 (TV, OVA, 극장판 등)
+          additional_info: string | null  // ✅ V1.5: 추가 정보 및 특징
           description: string | null
           created_at: string
           updated_at: string
@@ -229,6 +231,22 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['user_activities']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['user_activities']['Insert']>
+      }
+      limited_types: {
+        Row: {
+          id: string
+          code: string
+          name_ko: string
+          name_en: string | null
+          description: string | null
+          purchase_info: string | null
+          badge_color: string | null
+          sort_order: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['limited_types']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['limited_types']['Insert']>
       }
     }
     Views: {

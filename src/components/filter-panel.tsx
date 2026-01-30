@@ -4,13 +4,23 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import type { Grade, Brand, Series, Timeline } from '@/lib/types'
+import type { Grade, Series, Timeline } from '@/lib/types'
+
+interface LimitedType {
+  id: string
+  code: string
+  name_ko: string
+  name_en: string | null
+  description: string | null
+  badge_color: string | null
+  sort_order: number | null
+}
 
 interface FilterOptions {
   timelines: Timeline[]
   grades: Grade[]
-  brands: Brand[]
   series: Series[]
+  limitedTypes: LimitedType[]
 }
 
 interface FilterPanelProps {
@@ -21,20 +31,19 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
   const [options, setOptions] = useState<FilterOptions>({
     timelines: [],
     grades: [],
-    brands: [],
     series: [],
+    limitedTypes: [],
   })
   const [isOpen, setIsOpen] = useState(false)
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false)
   const sortDropdownRef = useRef<HTMLDivElement>(null)
-
+  
   // 선택된 필터
   const [selectedGrades, setSelectedGrades] = useState<string[]>([])
-  const [selectedBrands, setSelectedBrands] = useState<string[]>([])
   const [selectedSeries, setSelectedSeries] = useState<string[]>([])
+  const [selectedLimitedTypes, setSelectedLimitedTypes] = useState<string[]>([])
   const [priceMin, setPriceMin] = useState<string>('')
   const [priceMax, setPriceMax] = useState<string>('')
-  const [isPbandai, setIsPbandai] = useState<boolean | undefined>(undefined)
   const [sortBy, setSortBy] = useState<string>('release_date')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
@@ -66,16 +75,15 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
   useEffect(() => {
     const filters = {
       grade: selectedGrades,
-      brand: selectedBrands,
       series: selectedSeries,
+      limitedTypes: selectedLimitedTypes,
       priceMin: priceMin ? parseInt(priceMin) : undefined,
       priceMax: priceMax ? parseInt(priceMax) : undefined,
-      isPbandai,
       sortBy,
       sortOrder,
     }
     onFilterChange(filters)
-  }, [selectedGrades, selectedBrands, selectedSeries, priceMin, priceMax, isPbandai, sortBy, sortOrder])
+  }, [selectedGrades, selectedSeries, selectedLimitedTypes, priceMin, priceMax, sortBy, sortOrder])
 
   async function fetchFilterOptions() {
     try {
@@ -93,36 +101,34 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
     )
   }
 
-  const handleBrandToggle = (code: string) => {
-    setSelectedBrands(prev =>
-      prev.includes(code) ? prev.filter(b => b !== code) : [...prev, code]
-    )
-  }
-
   const handleSeriesToggle = (id: string) => {
     setSelectedSeries(prev =>
       prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
     )
   }
 
+  const handleLimitedTypeToggle = (id: string) => {
+    setSelectedLimitedTypes(prev =>
+      prev.includes(id) ? prev.filter(lt => lt !== id) : [...prev, id]
+    )
+  }
+
   const handleReset = () => {
     setSelectedGrades([])
-    setSelectedBrands([])
     setSelectedSeries([])
+    setSelectedLimitedTypes([])
     setPriceMin('')
     setPriceMax('')
-    setIsPbandai(undefined)
     setSortBy('release_date')
     setSortOrder('desc')
   }
 
-  const activeFilterCount =
-    selectedGrades.length +
-    selectedBrands.length +
-    selectedSeries.length +
-    (priceMin ? 1 : 0) +
-    (priceMax ? 1 : 0) +
-    (isPbandai !== undefined ? 1 : 0)
+  const activeFilterCount = 
+    selectedGrades.length + 
+    selectedSeries.length + 
+    selectedLimitedTypes.length +
+    (priceMin ? 1 : 0) + 
+    (priceMax ? 1 : 0)
 
   return (
     <div>
@@ -151,19 +157,19 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
                 className="w-full flex items-center justify-between px-4 py-3 bg-secondary border border-border rounded-xl text-foreground hover:bg-accent transition-colors"
               >
                 <span>{sortOptions.find(opt => opt.value === sortBy)?.label}</span>
-                <svg
-                  className={`w-4 h-4 transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
+                <svg 
+                  className={`w-4 h-4 transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`} 
+                  fill="none" 
+                  stroke="currentColor" 
                   viewBox="0 0 24 24"
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
-
+              
               {/* 드롭다운 메뉴 */}
               {isSortDropdownOpen && (
-                <div className="absolute z-50 w-full mt-1 py-1 bg-[#2a2a2a] border border-border rounded-xl shadow-lg overflow-hidden">
+                <div className="absolute z-50 w-full mt-1 py-1 bg-card border border-border rounded-xl shadow-lg overflow-hidden">
                   {sortOptions.map((option) => (
                     <button
                       key={option.value}
@@ -172,10 +178,11 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
                         setSortBy(option.value)
                         setIsSortDropdownOpen(false)
                       }}
-                      className={`w-full px-4 py-2.5 text-left transition-colors ${sortBy === option.value
+                      className={`w-full px-4 py-2.5 text-left transition-colors ${
+                        sortBy === option.value
                           ? 'bg-primary text-black font-medium'
                           : 'text-foreground hover:bg-secondary'
-                        }`}
+                      }`}
                     >
                       {option.label}
                     </button>
@@ -183,23 +190,25 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
                 </div>
               )}
             </div>
-
+            
             <div className="flex gap-2">
               <button
                 onClick={() => setSortOrder('desc')}
-                className={`flex-1 py-2 rounded-lg transition-colors ${sortOrder === 'desc'
+                className={`flex-1 py-2 rounded-lg transition-colors ${
+                  sortOrder === 'desc'
                     ? 'bg-primary text-black font-bold'
                     : 'bg-secondary text-muted-foreground'
-                  }`}
+                }`}
               >
                 내림차순
               </button>
               <button
                 onClick={() => setSortOrder('asc')}
-                className={`flex-1 py-2 rounded-lg transition-colors ${sortOrder === 'asc'
+                className={`flex-1 py-2 rounded-lg transition-colors ${
+                  sortOrder === 'asc'
                     ? 'bg-primary text-black font-bold'
                     : 'bg-secondary text-muted-foreground'
-                  }`}
+                }`}
               >
                 오름차순
               </button>
@@ -215,10 +224,11 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
               <button
                 key={grade.id}
                 onClick={() => handleGradeToggle(grade.code)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedGrades.includes(grade.code)
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  selectedGrades.includes(grade.code)
                     ? 'bg-primary text-black'
                     : 'bg-secondary text-foreground hover:bg-accent'
-                  }`}
+                }`}
               >
                 {grade.code}
               </button>
@@ -226,39 +236,21 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
           </div>
         </div>
 
-        {/* 브랜드 */}
-        <div className="card-threads">
-          <h3 className="font-bold mb-3">브랜드</h3>
-          <div className="space-y-1 max-h-48 overflow-y-auto scrollbar-thin">
-            {options.brands.slice(0, 20).map((brand) => (
-              <label
-                key={brand.id}
-                className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary cursor-pointer transition-colors"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedBrands.includes(brand.code)}
-                  onChange={() => handleBrandToggle(brand.code)}
-                  className="w-4 h-4"
-                />
-                <span className="text-sm">{brand.name}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* 시리즈 */}
+        {/* 시리즈 - 년도순 정렬 */}
         <div className="card-threads">
           <h3 className="font-bold mb-3">시리즈</h3>
           <div className="flex flex-col gap-1.5">
-            {options.series.map((series) => (
+            {[...options.series]
+              .sort((a, b) => (a.year_start || 9999) - (b.year_start || 9999))
+              .map((series) => (
               <button
                 key={series.id}
                 onClick={() => handleSeriesToggle(series.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-left ${selectedSeries.includes(series.id)
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-left ${
+                  selectedSeries.includes(series.id)
                     ? 'bg-primary text-black'
                     : 'bg-secondary text-foreground hover:bg-accent'
-                  }`}
+                }`}
               >
                 {series.name_ko}
               </button>
@@ -287,21 +279,35 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
           </div>
         </div>
 
-        {/* P-BANDAI */}
-        <div className="card-threads">
-          <h3 className="font-bold mb-3">P-BANDAI</h3>
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isPbandai === true}
-                onChange={(e) => setIsPbandai(e.target.checked ? true : undefined)}
-                className="w-4 h-4"
-              />
-              <span className="text-sm">P-BANDAI만 보기</span>
-            </label>
+        {/* 한정판 - 동적 로드 */}
+        {options.limitedTypes.length > 0 && (
+          <div className="card-threads">
+            <h3 className="font-bold mb-3">한정판</h3>
+            <div className="flex flex-col gap-1.5">
+              {options.limitedTypes.map((limitedType) => (
+                <button
+                  key={limitedType.id}
+                  onClick={() => handleLimitedTypeToggle(limitedType.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-left flex items-center gap-2 ${
+                    selectedLimitedTypes.includes(limitedType.id)
+                      ? 'text-white'
+                      : 'bg-secondary text-foreground hover:bg-accent'
+                  }`}
+                  style={selectedLimitedTypes.includes(limitedType.id) 
+                    ? { backgroundColor: limitedType.badge_color || '#DC2626' } 
+                    : {}
+                  }
+                >
+                  <span
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: limitedType.badge_color || '#DC2626' }}
+                  />
+                  {limitedType.name_ko}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* 초기화 버튼 */}
         {activeFilterCount > 0 && (

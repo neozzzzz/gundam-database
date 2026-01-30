@@ -48,7 +48,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-gradient">
-              Gundam Database
+              GUNDAM ARCHIVE
             </h1>
             <nav className="flex items-center gap-4">
               <Link href="/kits" className="text-muted-foreground hover:text-foreground transition-colors">
@@ -176,7 +176,7 @@ export default function HomePage() {
       <footer className="border-t border-border mt-20">
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="text-center text-muted-foreground">
-            <p>© 2024 Gundam Database. Made with ❤️ for Gunpla fans.</p>
+            <p>© 2024 GUNDAM ARCHIVE. Made with ❤️ for Gunpla fans.</p>
             <p className="text-sm mt-2">
               이 사이트는 비공식 팬 프로젝트입니다. 모든 건담 관련 저작권은 BANDAI NAMCO에 있습니다.
             </p>

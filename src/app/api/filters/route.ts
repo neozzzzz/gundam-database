@@ -1,5 +1,5 @@
 // src/app/api/filters/route.ts
-// 필터 옵션 조회 API (등급, 브랜드, 시리즈 등)
+// 필터 옵션 조회 API (등급, 브랜드, 시리즈, 한정판 유형 등)
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -14,11 +14,13 @@ export async function GET() {
       { data: grades },
       { data: brands },
       { data: series },
+      { data: limitedTypes },
     ] = await Promise.all([
       supabase.from('timelines').select('*').order('code'),
       supabase.from('grades').select('*').order('sort_order'),
       supabase.from('brands').select('*, grade:grades(code, name)').order('sort_order'),
       supabase.from('series').select('*, timeline:timelines(code, name_ko)').order('name_ko'),
+      supabase.from('limited_types').select('*').order('sort_order'),
     ])
 
     return NextResponse.json({
@@ -27,6 +29,7 @@ export async function GET() {
         grades: grades || [],
         brands: brands || [],
         series: series || [],
+        limitedTypes: limitedTypes || [],
       },
       error: null,
     })

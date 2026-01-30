@@ -55,10 +55,19 @@ export function KitCard({ kit }: KitCardProps) {
             )
           })()}
           
-          {/* P-BANDAI 뱃지 */}
-          {kit.is_pbandai && (
+          {/* 한정판 뱃지 - 동적 유형 */}
+          {kit.limited_type && (
+            <div 
+              className="absolute top-2 right-2 text-white text-xs px-2 py-1 rounded-full font-bold"
+              style={{ backgroundColor: kit.limited_type.badge_color || '#DC2626' }}
+            >
+              {kit.limited_type.name_ko}
+            </div>
+          )}
+          {/* 하위 호환성: limited_type이 없고 is_pbandai만 있는 경우 */}
+          {!kit.limited_type && kit.is_pbandai && (
             <div className="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded-full font-bold">
-              P-BANDAI
+              프리미엄 반다이
             </div>
           )}
         </div>

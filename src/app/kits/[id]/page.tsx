@@ -83,7 +83,7 @@ export default function KitDetailPage() {
             </button>
             <h1 className="text-2xl font-bold">
               <a href="/" className="hover:text-primary transition-colors">
-                Gundam Database
+                GUNDAM ARCHIVE
               </a>
             </h1>
           </div>
@@ -173,10 +173,19 @@ export default function KitDetailPage() {
                     {mobileSuit.organizations.name_ko || mobileSuit.organizations.name}
                   </span>
                 )}
-                {/* P-BANDAI 뱃지 */}
-                {kit.is_pbandai && (
+                {/* 한정판 뱃지 - 동적 유형 */}
+                {kit.limited_type && (
+                  <span 
+                    className="px-3 py-1 text-white rounded-lg font-bold text-sm"
+                    style={{ backgroundColor: kit.limited_type.badge_color || '#DC2626' }}
+                  >
+                    {kit.limited_type.name_ko}
+                  </span>
+                )}
+                {/* 하위 호환성: limited_type이 없고 is_pbandai만 있는 경우 */}
+                {!kit.limited_type && kit.is_pbandai && (
                   <span className="px-3 py-1 bg-red-600 text-white rounded-lg font-bold text-sm">
-                    P-BANDAI
+                    프리미엄 반다이
                   </span>
                 )}
               </div>
@@ -275,6 +284,54 @@ export default function KitDetailPage() {
               </div>
             )}
 
+            {/* 시리즈 정보 */}
+            {kit.series && (
+              <div className="card-threads">
+                <h3 className="font-bold mb-3 flex items-center gap-2">
+                  <span>📺</span>
+                  <span>시리즈 정보</span>
+                </h3>
+                <div className="space-y-3">
+                  {/* 시리즈명 */}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">시리즈명</span>
+                    <span className="font-medium">{kit.series.name_ko}</span>
+                  </div>
+                  {/* 영문명 */}
+                  {kit.series.name_en && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">영문명</span>
+                      <span className="font-medium text-muted-foreground text-sm">{kit.series.name_en}</span>
+                    </div>
+                  )}
+                  {/* 방영년도 */}
+                  {kit.series.year_start && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">방영년도</span>
+                      <span className="font-medium">{kit.series.year_start}년</span>
+                    </div>
+                  )}
+                  {/* 형태 */}
+                  {kit.series.media_type && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">형태</span>
+                      <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 rounded text-sm font-medium">
+                        {kit.series.media_type}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                {/* 추가 정보 */}
+                {kit.series.additional_info && (
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      {kit.series.additional_info}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* 가격 */}
             <div className="card-threads bg-primary/5 border-primary/20">
               <div className="flex items-center justify-between">
@@ -318,6 +375,68 @@ export default function KitDetailPage() {
                     >
                       <span>{link.store?.name || '판매처'}</span>
                       <span className="text-primary">→</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 관련 킷 */}
+            {kit.related_kits && kit.related_kits.length > 0 && (
+              <div className="card-threads">
+                <h3 className="font-bold mb-4">관련 킷</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {kit.related_kits.map((relatedKit: any) => (
+                    <a
+                      key={relatedKit.id}
+                      href={`/kits/${relatedKit.id}`}
+                      className="group block bg-secondary rounded-xl overflow-hidden hover:bg-accent transition-colors"
+                    >
+                      {/* 이미지 */}
+                      <div className="aspect-square bg-background/50 relative overflow-hidden">
+                        {relatedKit.box_art_url ? (
+                          <img
+                            src={relatedKit.box_art_url}
+                            alt={relatedKit.name_ko}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <img 
+                              src="/no-image.png" 
+                              alt="이미지 없음"
+                              className="w-1/3 h-1/3 object-contain invert opacity-30"
+                            />
+                          </div>
+                        )}
+                        {/* 관계 유형 뱃지 */}
+                        {relatedKit.relation_type && (
+                          <span className="absolute top-2 left-2 px-2 py-0.5 bg-black/70 text-white text-xs rounded-full">
+                            {relatedKit.relation_type === 'same_mobile_suit' && '같은 MS'}
+                            {relatedKit.relation_type === 'same_series' && '같은 시리즈'}
+                            {relatedKit.relation_type === 'variant' && '바리에이션'}
+                            {relatedKit.relation_type === 'upgrade' && '업그레이드'}
+                            {relatedKit.relation_type === 'recommended' && '추천'}
+                            {!['same_mobile_suit', 'same_series', 'variant', 'upgrade', 'recommended'].includes(relatedKit.relation_type) && relatedKit.relation_type}
+                          </span>
+                        )}
+                      </div>
+                      {/* 정보 */}
+                      <div className="p-3">
+                        {relatedKit.grade && (
+                          <span className="text-xs text-primary font-semibold">
+                            {relatedKit.grade.code}
+                          </span>
+                        )}
+                        <p className="text-sm font-medium line-clamp-2 mt-1 group-hover:text-primary transition-colors">
+                          {relatedKit.name_ko}
+                        </p>
+                        {relatedKit.price_krw && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            ₩{relatedKit.price_krw.toLocaleString()}
+                          </p>
+                        )}
+                      </div>
                     </a>
                   ))}
                 </div>

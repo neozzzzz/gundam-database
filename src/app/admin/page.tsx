@@ -704,6 +704,12 @@ export default function AdminDashboard() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <Link
+                          href={`/admin/series/${series.id}/edit`}
+                          className="text-purple-600 hover:text-purple-900 mr-4"
+                        >
+                          수정
+                        </Link>
                         <button
                           onClick={() => handleDeleteSeries(series.id, series.name_ko)}
                           className="text-red-600 hover:text-red-900"
