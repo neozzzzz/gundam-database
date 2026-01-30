@@ -78,7 +78,7 @@ export function AuthButton() {
       disabled={isSigningIn}
       className="btn-primary"
     >
-      {isSigningIn ? '로그인 중...' : '🔐 Google 로그인'}
+      {isSigningIn ? '로그인 중...' : '로그인'}
     </button>
   )
 }
