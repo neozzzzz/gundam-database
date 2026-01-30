@@ -10,6 +10,7 @@ export default function AdminDashboard() {
   const supabase = createClientComponentClient()
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [authChecked, setAuthChecked] = useState(false)
   const [stats, setStats] = useState({
     totalKits: 0,
     realKits: 0,
@@ -23,29 +24,35 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     checkUser()
-    loadStats()
   }, [])
+
+  // 인증 완료 후에만 통계 로드
+  useEffect(() => {
+    if (authChecked && user) {
+      loadStats()
+    }
+  }, [authChecked, user])
 
   const checkUser = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       
       if (!session) {
-        router.push('/admin/login')
+        router.replace('/admin/login')
         return
       }
 
       if (session.user.email !== process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
-        alert('접근 권한이 없습니다.')
         await supabase.auth.signOut()
-        router.push('/admin/login')
+        router.replace('/admin/login')
         return
       }
 
       setUser(session.user)
+      setAuthChecked(true)
     } catch (error) {
       console.error('사용자 확인 오류:', error)
-      router.push('/admin/login')
+      router.replace('/admin/login')
     } finally {
       setLoading(false)
     }
