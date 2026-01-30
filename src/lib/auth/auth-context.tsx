@@ -52,10 +52,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) {
-      console.error('Error signing out:', error)
-      throw error
+    // 먼저 user 상태 초기화
+    setUser(null)
+    
+    try {
+      // scope: 'local'로 시도
+      await supabase.auth.signOut({ scope: 'local' })
+    } catch (error) {
+      // 에러 발생해도 무시 - 로컬 상태는 이미 초기화됨
+      console.log('SignOut API error (ignored):', error)
+    }
+    
+    // 브라우저 스토리지 강제 삭제
+    if (typeof window !== 'undefined') {
+      // 로컬 스토리지
+      const localKeys = Object.keys(localStorage)
+      localKeys.forEach(key => {
+        if (key.startsWith('sb-') || key.includes('supabase')) {
+          localStorage.removeItem(key)
+        }
+      })
+      
+      // 세션 스토리지
+      const sessionKeys = Object.keys(sessionStorage)
+      sessionKeys.forEach(key => {
+        if (key.startsWith('sb-') || key.includes('supabase')) {
+          sessionStorage.removeItem(key)
+        }
+      })
+      
+      // 쿠키 삭제 (supabase 관련)
+      document.cookie.split(';').forEach(cookie => {
+        const name = cookie.split('=')[0].trim()
+        if (name.startsWith('sb-') || name.includes('supabase') || name.includes('auth')) {
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
+        }
+      })
+      
+      // 페이지 새로고침으로 완전히 초기화
+      window.location.href = '/'
     }
   }
 

@@ -9,8 +9,6 @@ export default function AdminDashboard() {
   const router = useRouter()
   const supabase = createClientComponentClient()
   const [user, setUser] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [authChecked, setAuthChecked] = useState(false)
   const [stats, setStats] = useState({
     totalKits: 0,
     realKits: 0,
@@ -23,38 +21,15 @@ export default function AdminDashboard() {
   })
 
   useEffect(() => {
-    checkUser()
+    // layout.tsx에서 이미 인증 체크 완료됨, 여기서는 user 정보만 가져옴
+    getUser()
+    loadStats()
   }, [])
 
-  // 인증 완료 후에만 통계 로드
-  useEffect(() => {
-    if (authChecked && user) {
-      loadStats()
-    }
-  }, [authChecked, user])
-
-  const checkUser = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session) {
-        router.replace('/admin/login')
-        return
-      }
-
-      if (session.user.email !== process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
-        await supabase.auth.signOut()
-        router.replace('/admin/login')
-        return
-      }
-
+  const getUser = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) {
       setUser(session.user)
-      setAuthChecked(true)
-    } catch (error) {
-      console.error('사용자 확인 오류:', error)
-      router.replace('/admin/login')
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -110,16 +85,44 @@ export default function AdminDashboard() {
   }
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push('/admin/login')
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    )
+    // 먼저 상태 초기화
+    setUser(null)
+    
+    try {
+      await supabase.auth.signOut({ scope: 'local' })
+    } catch (error) {
+      console.log('Logout API error (ignored):', error)
+    }
+    
+    // 브라우저 스토리지 강제 삭제
+    if (typeof window !== 'undefined') {
+      // 로컬 스토리지
+      const localKeys = Object.keys(localStorage)
+      localKeys.forEach(key => {
+        if (key.startsWith('sb-') || key.includes('supabase')) {
+          localStorage.removeItem(key)
+        }
+      })
+      
+      // 세션 스토리지
+      const sessionKeys = Object.keys(sessionStorage)
+      sessionKeys.forEach(key => {
+        if (key.startsWith('sb-') || key.includes('supabase')) {
+          sessionStorage.removeItem(key)
+        }
+      })
+      
+      // 쿠키 삭제 (supabase 관련)
+      document.cookie.split(';').forEach(cookie => {
+        const name = cookie.split('=')[0].trim()
+        if (name.startsWith('sb-') || name.includes('supabase') || name.includes('auth')) {
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
+        }
+      })
+      
+      // 하드 리다이렉트로 완전히 초기화
+      window.location.href = '/admin/login'
+    }
   }
 
   return (
