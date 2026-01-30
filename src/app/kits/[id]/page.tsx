@@ -10,6 +10,19 @@ export default function KitDetailPage() {
   const [kit, setKit] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showPilotModal, setShowPilotModal] = useState(false)
+
+  // 모달 열릴 때 body 스크롤 잠금
+  useEffect(() => {
+    if (showPilotModal) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [showPilotModal])
 
   useEffect(() => {
     async function fetchKit() {
@@ -19,7 +32,6 @@ export default function KitDetailPage() {
           throw new Error('Failed to fetch kit')
         }
         const data = await response.json()
-        console.log('Kit data:', data)
         setKit(data)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error')
@@ -95,12 +107,12 @@ export default function KitDetailPage() {
           {/* 왼쪽: 이미지 */}
           <div className="space-y-4">
             {/* 메인 이미지 */}
-            <div className="aspect-square bg-secondary rounded-2xl overflow-hidden">
+            <div className="aspect-[4/3] bg-secondary rounded-2xl overflow-hidden flex items-center justify-center">
               {imageUrl ? (
                 <img
                   src={imageUrl}
                   alt={kit.name_ko}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-secondary">
@@ -161,18 +173,6 @@ export default function KitDetailPage() {
                     {kit.brand.name_ko || kit.brand.name}
                   </span>
                 )}
-                {/* 진영 뱃지 */}
-                {mobileSuit?.factions && (
-                  <span className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-lg text-sm font-medium">
-                    {mobileSuit.factions.name_ko || mobileSuit.factions.name}
-                  </span>
-                )}
-                {/* 조직 뱃지 */}
-                {mobileSuit?.organizations && (
-                  <span className="px-3 py-1 bg-purple-500/20 text-purple-400 rounded-lg text-sm">
-                    {mobileSuit.organizations.name_ko || mobileSuit.organizations.name}
-                  </span>
-                )}
                 {/* 한정판 뱃지 - 동적 유형 */}
                 {kit.limited_type && (
                   <span 
@@ -226,7 +226,9 @@ export default function KitDetailPage() {
             {mobileSuit && (
               <div className="card-threads">
                 <h3 className="font-bold mb-3 flex items-center gap-2">
-                  <span>🤖</span>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                  </svg>
                   <span>모빌슈트 정보</span>
                 </h3>
                 <div className="space-y-3">
@@ -255,7 +257,42 @@ export default function KitDetailPage() {
                   {mobileSuit.pilot && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">파일럿</span>
-                      <span className="font-medium">{mobileSuit.pilot}</span>
+                      <button 
+                        onClick={() => setShowPilotModal(true)}
+                        className="px-2 py-0.5 rounded text-sm font-medium bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors cursor-pointer"
+                      >
+                        {mobileSuit.pilot.name_ko || mobileSuit.pilot.name_en || mobileSuit.pilot}
+                      </button>
+                    </div>
+                  )}
+                  {/* 진영 */}
+                  {mobileSuit.factions && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">소속 진영</span>
+                      <span 
+                        className="px-2 py-0.5 rounded text-sm font-medium"
+                        style={{ 
+                          backgroundColor: mobileSuit.factions.color ? `${mobileSuit.factions.color}20` : '#3B82F620',
+                          color: mobileSuit.factions.color || '#3B82F6'
+                        }}
+                      >
+                        {mobileSuit.factions.name_ko || mobileSuit.factions.name}
+                      </span>
+                    </div>
+                  )}
+                  {/* 제조사 */}
+                  {mobileSuit.company && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">제조사</span>
+                      <span 
+                        className="px-2 py-0.5 rounded text-sm font-medium"
+                        style={{ 
+                          backgroundColor: `${mobileSuit.company.color}20` || '#14B8A620',
+                          color: mobileSuit.company.color || '#14B8A6'
+                        }}
+                      >
+                        {mobileSuit.company.name_ko}
+                      </span>
                     </div>
                   )}
                   {/* 전고 */}
@@ -288,7 +325,10 @@ export default function KitDetailPage() {
             {kit.series && (
               <div className="card-threads">
                 <h3 className="font-bold mb-3 flex items-center gap-2">
-                  <span>📺</span>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <rect x="2" y="7" width="20" height="15" rx="2" ry="2" strokeWidth="2"/>
+                    <polyline points="17 2 12 7 7 2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                   <span>시리즈 정보</span>
                 </h3>
                 <div className="space-y-3">
@@ -445,6 +485,157 @@ export default function KitDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* 파일럿 상세 모달 */}
+      {showPilotModal && mobileSuit?.pilot && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          onClick={() => setShowPilotModal(false)}
+        >
+          <div 
+            className="bg-card border border-border rounded-2xl max-w-md w-full max-h-[80vh] overflow-hidden shadow-2xl animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 헤더 */}
+            <div className="border-b border-border p-4 flex items-center justify-between">
+              <h3 className="text-xl font-bold flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                <span>파일럿 정보</span>
+              </h3>
+              <button 
+                onClick={() => setShowPilotModal(false)}
+                className="text-muted-foreground hover:text-foreground transition-colors text-2xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+            
+            {/* 내용 - 커스텀 스크롤바 */}
+            <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto scrollbar-thin">
+              {/* 프로필 이미지 */}
+              {mobileSuit.pilot.image_url && (
+                <div className="flex justify-center">
+                  <div className="w-32 h-40 rounded-xl overflow-hidden bg-secondary">
+                    <img
+                      src={mobileSuit.pilot.image_url}
+                      alt={mobileSuit.pilot.name_ko}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* 이름 섹션 */}
+              <div className="text-center pb-4 border-b border-border">
+                <h4 className="text-2xl font-bold mb-1">
+                  {mobileSuit.pilot.name_ko}
+                </h4>
+                {mobileSuit.pilot.name_en && (
+                  <p className="text-muted-foreground">{mobileSuit.pilot.name_en}</p>
+                )}
+                {mobileSuit.pilot.name_ja && (
+                  <p className="text-muted-foreground/60 text-sm">{mobileSuit.pilot.name_ja}</p>
+                )}
+                {mobileSuit.pilot.code && (
+                  <span className="inline-block mt-2 px-2 py-1 bg-secondary text-muted-foreground rounded font-mono text-sm">
+                    {mobileSuit.pilot.code}
+                  </span>
+                )}
+              </div>
+
+              {/* 기본 정보 */}
+              <div className="space-y-3">
+                {mobileSuit.pilot.role && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">역할</span>
+                    <span className={`px-2 py-1 rounded text-sm font-medium ${
+                      mobileSuit.pilot.role === 'protagonist' ? 'bg-blue-500/20 text-blue-400' :
+                      mobileSuit.pilot.role === 'antagonist' ? 'bg-red-500/20 text-red-400' :
+                      mobileSuit.pilot.role === 'supporting' ? 'bg-yellow-500/20 text-yellow-400' :
+                      'bg-secondary text-muted-foreground'
+                    }`}>
+                      {mobileSuit.pilot.role === 'protagonist' ? '주인공' :
+                       mobileSuit.pilot.role === 'antagonist' ? '적대자' :
+                       mobileSuit.pilot.role === 'supporting' ? '조연' : '기타'}
+                    </span>
+                  </div>
+                )}
+                
+                {mobileSuit.pilot.rank && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">계급</span>
+                    <span className="text-foreground">{mobileSuit.pilot.rank}</span>
+                  </div>
+                )}
+
+                {mobileSuit.pilot.nationality && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">국적</span>
+                    <span className="text-foreground">{mobileSuit.pilot.nationality}</span>
+                  </div>
+                )}
+
+                {mobileSuit.pilot.birth_date && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">생년월일</span>
+                    <span className="text-foreground">{mobileSuit.pilot.birth_date}</span>
+                  </div>
+                )}
+
+                {mobileSuit.pilot.death_date && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">사망일</span>
+                    <span className="text-red-400">{mobileSuit.pilot.death_date}</span>
+                  </div>
+                )}
+
+                {mobileSuit.pilot.blood_type && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">혈액형</span>
+                    <span className="text-foreground">{mobileSuit.pilot.blood_type}형</span>
+                  </div>
+                )}
+
+                {mobileSuit.pilot.height && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">신장</span>
+                    <span className="text-foreground">{mobileSuit.pilot.height}cm</span>
+                  </div>
+                )}
+
+                {mobileSuit.pilot.weight && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">체중</span>
+                    <span className="text-foreground">{mobileSuit.pilot.weight}kg</span>
+                  </div>
+                )}
+              </div>
+
+              {/* 약력 */}
+              {mobileSuit.pilot.bio && (
+                <div className="pt-4 border-t border-border">
+                  <h5 className="text-sm font-medium text-muted-foreground mb-2">약력</h5>
+                  <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-wrap">
+                    {mobileSuit.pilot.bio}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* 푸터 */}
+            <div className="border-t border-border p-4">
+              <button
+                onClick={() => setShowPilotModal(false)}
+                className="w-full py-2 bg-primary text-primary-foreground rounded-full font-medium hover:bg-primary/90 transition-colors"
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

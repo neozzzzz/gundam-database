@@ -5,26 +5,16 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 
-const UNIVERSES = [
-  { code: 'UC', name: 'UC (Universal Century)' },
-  { code: 'CE', name: 'CE (Cosmic Era)' },
-  { code: 'AD', name: 'AD (Anno Domini)' },
-  { code: 'AC', name: 'AC (After Colony)' },
-  { code: 'AG', name: 'AG (Advanced Generation)' },
-  { code: 'PD', name: 'PD (Post Disaster)' },
-  { code: 'BUILD', name: 'BUILD' },
-  { code: 'OTHER', name: '기타' },
-]
-
-export default function FactionsAdmin() {
+export default function KitsAdmin() {
   const router = useRouter()
   const supabase = createClientComponentClient()
   
   const [loading, setLoading] = useState(true)
-  const [factions, setFactions] = useState<any[]>([])
+  const [kits, setKits] = useState<any[]>([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedUniverse, setSelectedUniverse] = useState('')
-
+  const [selectedGrades, setSelectedGrades] = useState<string[]>([])
+  const [grades, setGrades] = useState<any[]>([])
+  
   // 페이지네이션
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(20)
@@ -32,11 +22,12 @@ export default function FactionsAdmin() {
 
   useEffect(() => {
     checkAuth()
+    loadGrades()
   }, [])
 
   useEffect(() => {
-    loadFactions()
-  }, [currentPage, searchTerm, selectedUniverse])
+    loadKits()
+  }, [currentPage, searchTerm, selectedGrades, grades])
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -45,36 +36,72 @@ export default function FactionsAdmin() {
     }
   }
 
-  const loadFactions = async () => {
+  const loadGrades = async () => {
+    const { data } = await supabase
+      .from('grades')
+      .select('*')
+      .order('sort_order')
+    
+    setGrades(data || [])
+  }
+
+  const loadKits = async () => {
     try {
       setLoading(true)
       let query = supabase
-        .from('factions')
-        .select('*', { count: 'exact' })
-        .order('sort_order')
+        .from('gundam_kits')
+        .select(`
+          *,
+          grade:grades(code, name),
+          series:series(name_ko)
+        `, { count: 'exact' })
+        .order('updated_at', { ascending: false })
 
       // 검색 필터
       if (searchTerm) {
-        query = query.or(`name_ko.ilike.%${searchTerm}%,name_en.ilike.%${searchTerm}%,code.ilike.%${searchTerm}%`)
+        query = query.or(`name_ko.ilike.%${searchTerm}%,name_en.ilike.%${searchTerm}%`)
       }
 
-      // 세계관 필터
-      if (selectedUniverse) {
-        query = query.eq('universe', selectedUniverse)
+      // 등급 필터
+      if (selectedGrades.length > 0 && grades.length > 0) {
+        const gradeIds = grades
+          .filter(g => selectedGrades.includes(g.code))
+          .map(g => g.id)
+        
+        if (gradeIds.length > 0) {
+          query = query.in('grade_id', gradeIds)
+        }
       }
 
-      // 페이지네이션
-      const from = (currentPage - 1) * itemsPerPage
-      const to = from + itemsPerPage - 1
-      query = query.range(from, to)
-
-      const { data, error, count } = await query
+      const { data: allData, error, count } = await query
 
       if (error) throw error
-      setFactions(data || [])
+      
+      // 클라이언트 사이드 정렬: 수정된 킷만 위로
+      const sortedData = (allData || []).sort((a, b) => {
+        const aUpdated = new Date(a.updated_at).getTime()
+        const aCreated = new Date(a.created_at).getTime()
+        const bUpdated = new Date(b.updated_at).getTime()
+        const bCreated = new Date(b.created_at).getTime()
+        
+        const aModified = Math.abs(aUpdated - aCreated) > 1000
+        const bModified = Math.abs(bUpdated - bCreated) > 1000
+        
+        if (aModified && !bModified) return -1
+        if (!aModified && bModified) return 1
+        if (aModified && bModified) return bUpdated - aUpdated
+        return bCreated - aCreated
+      })
+      
+      // 페이지네이션 적용
+      const from = (currentPage - 1) * itemsPerPage
+      const to = from + itemsPerPage
+      const paginatedData = sortedData.slice(from, to)
+      
+      setKits(paginatedData)
       setTotalCount(count || 0)
     } catch (error: any) {
-      console.error('Factions 로딩 오류:', error)
+      console.error('킷 로딩 오류:', error)
       alert(`오류: ${error.message}`)
     } finally {
       setLoading(false)
@@ -82,22 +109,40 @@ export default function FactionsAdmin() {
   }
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`"${name}" 진영을 삭제하시겠습니까?`)) return
+    if (!confirm(`"${name}" 킷을 삭제하시겠습니까?`)) {
+      return
+    }
 
     try {
       const { error } = await supabase
-        .from('factions')
+        .from('gundam_kits')
         .delete()
         .eq('id', id)
 
       if (error) throw error
 
       alert('삭제되었습니다!')
-      loadFactions()
+      loadKits()
     } catch (error: any) {
       console.error('삭제 오류:', error)
       alert(`삭제 실패: ${error.message}`)
     }
+  }
+
+  const toggleGrade = (gradeCode: string) => {
+    setSelectedGrades(prev => {
+      if (prev.includes(gradeCode)) {
+        return prev.filter(g => g !== gradeCode)
+      } else {
+        return [...prev, gradeCode]
+      }
+    })
+    setCurrentPage(1)
+  }
+
+  const clearAllGrades = () => {
+    setSelectedGrades([])
+    setCurrentPage(1)
   }
 
   const totalPages = Math.ceil(totalCount / itemsPerPage)
@@ -105,6 +150,7 @@ export default function FactionsAdmin() {
   const getPageNumbers = () => {
     const pages = []
     const maxVisible = 5
+
     if (totalPages <= maxVisible) {
       for (let i = 1; i <= totalPages; i++) pages.push(i)
     } else {
@@ -116,12 +162,12 @@ export default function FactionsAdmin() {
     return pages
   }
 
-  if (loading && factions.length === 0) {
+  if (loading && kits.length === 0) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
-          <p className="text-gray-900 font-medium">진영 목록을 불러오는 중...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-900 font-medium">킷 목록을 불러오는 중...</p>
         </div>
       </div>
     )
@@ -142,15 +188,15 @@ export default function FactionsAdmin() {
                 </svg>
               </Link>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">⚔️ 진영/조직 관리</h1>
+                <h1 className="text-3xl font-bold text-gray-900">📦 킷 관리</h1>
                 <p className="text-sm text-gray-600 mt-1">총 {totalCount}개</p>
               </div>
             </div>
             <Link
-              href="/admin/factions/new"
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              href="/admin/kits/new"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              + 진영 추가
+              + 킷 추가
             </Link>
           </div>
         </div>
@@ -170,44 +216,38 @@ export default function FactionsAdmin() {
                   setSearchTerm(e.target.value)
                   setCurrentPage(1)
                 }}
-                placeholder="이름, 코드 검색..."
+                placeholder="킷 이름 검색..."
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900 bg-white"
               />
             </div>
 
-            {/* 세계관 필터 - 뱃지 형태 */}
+            {/* 등급 필터 */}
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <label className="block text-sm font-medium text-gray-700">세계관 필터</label>
-                {selectedUniverse && (
+                <label className="block text-sm font-medium text-gray-700">등급 필터</label>
+                {selectedGrades.length > 0 && (
                   <button
-                    onClick={() => {
-                      setSelectedUniverse('')
-                      setCurrentPage(1)
-                    }}
-                    className="text-xs text-red-600 hover:text-red-800"
+                    onClick={clearAllGrades}
+                    className="text-xs text-blue-600 hover:text-blue-800"
                   >
                     전체 해제
                   </button>
                 )}
               </div>
               <div className="flex flex-wrap gap-2">
-                {UNIVERSES.map((universe) => {
-                  const isSelected = selectedUniverse === universe.code
+                {grades.map((grade) => {
+                  const isSelected = selectedGrades.includes(grade.code)
                   return (
                     <button
-                      key={universe.code}
-                      onClick={() => {
-                        setSelectedUniverse(isSelected ? '' : universe.code)
-                        setCurrentPage(1)
-                      }}
+                      key={grade.id}
+                      onClick={() => toggleGrade(grade.code)}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                         isSelected
-                          ? 'bg-red-600 text-white shadow-md'
+                          ? 'bg-blue-600 text-white shadow-md'
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                     >
-                      {universe.code}
+                      {grade.code}
                     </button>
                   )
                 })}
@@ -216,26 +256,23 @@ export default function FactionsAdmin() {
           </div>
         </div>
 
-        {/* 진영 테이블 */}
+        {/* 킷 테이블 */}
         <div className="bg-white rounded-xl shadow overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    코드
+                    킷 이름
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    이름
+                    등급
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    세계관
+                    시리즈
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    색상
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    순서
+                    가격
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     작업
@@ -243,57 +280,42 @@ export default function FactionsAdmin() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {factions.length === 0 ? (
+                {kits.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                      {searchTerm || selectedUniverse ? '검색 결과가 없습니다.' : '등록된 진영이 없습니다.'}
+                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                      {searchTerm || selectedGrades.length > 0 ? '검색 결과가 없습니다.' : '등록된 킷이 없습니다.'}
                     </td>
                   </tr>
                 ) : (
-                  factions.map((faction) => (
-                    <tr key={faction.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="font-mono text-sm text-gray-900 bg-gray-100 px-2 py-1 rounded">
-                          {faction.code}
-                        </span>
-                      </td>
+                  kits.map((kit) => (
+                    <tr key={kit.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
-                        <div className="font-medium text-gray-900">{faction.name_ko}</div>
-                        {faction.name_en && (
-                          <div className="text-sm text-gray-500">{faction.name_en}</div>
+                        <div className="font-medium text-gray-900">{kit.name_ko}</div>
+                        {kit.name_en && (
+                          <div className="text-sm text-gray-500">{kit.name_en}</div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                          {faction.universe || '-'}
+                        <span className="px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800">
+                          {kit.grade?.code || '-'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {faction.color ? (
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-8 h-8 rounded border border-gray-300"
-                              style={{ backgroundColor: faction.color }}
-                            />
-                            <span className="text-sm text-gray-600">{faction.color}</span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {kit.series?.name_ko || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {faction.sort_order || 0}
+                        {kit.price_krw ? `₩${kit.price_krw.toLocaleString()}` : '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                         <div className="flex items-center justify-end gap-2">
                           <Link
-                            href={`/admin/factions/${faction.id}/edit`}
-                            className="text-red-600 hover:text-red-800 font-medium"
+                            href={`/admin/kits/${kit.id}/edit`}
+                            className="text-blue-600 hover:text-blue-800 font-medium"
                           >
                             수정
                           </Link>
                           <button
-                            onClick={() => handleDelete(faction.id, faction.name_ko)}
+                            onClick={() => handleDelete(kit.id, kit.name_ko)}
                             className="text-red-600 hover:text-red-800 font-medium"
                           >
                             삭제
@@ -336,7 +358,7 @@ export default function FactionsAdmin() {
                       onClick={() => setCurrentPage(page)}
                       className={`px-3 py-1 rounded-lg text-sm font-medium ${
                         currentPage === page
-                          ? 'bg-red-600 text-white'
+                          ? 'bg-blue-600 text-white'
                           : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
                       }`}
                     >

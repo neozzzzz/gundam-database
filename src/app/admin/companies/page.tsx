@@ -10,20 +10,30 @@ const UNIVERSES = [
   { code: 'CE', name: 'CE (Cosmic Era)' },
   { code: 'AD', name: 'AD (Anno Domini)' },
   { code: 'AC', name: 'AC (After Colony)' },
-  { code: 'AG', name: 'AG (Advanced Generation)' },
+  { code: 'FC', name: 'FC (Future Century)' },
   { code: 'PD', name: 'PD (Post Disaster)' },
-  { code: 'BUILD', name: 'BUILD' },
+  { code: 'AS', name: 'AS (Ad Stella)' },
+  { code: 'BD', name: 'BD (Build)' },
   { code: 'OTHER', name: '기타' },
 ]
 
-export default function FactionsAdmin() {
+const COMPANY_TYPES = [
+  { code: 'manufacturer', name: '제조사' },
+  { code: 'research', name: '연구기관' },
+  { code: 'conglomerate', name: '복합기업' },
+  { code: 'military_org', name: '군사조직' },
+]
+
+export default function CompaniesAdmin() {
   const router = useRouter()
   const supabase = createClientComponentClient()
   
   const [loading, setLoading] = useState(true)
-  const [factions, setFactions] = useState<any[]>([])
+  const [companies, setCompanies] = useState<any[]>([])
+  const [msCounts, setMsCounts] = useState<Record<string, number>>({})
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedUniverse, setSelectedUniverse] = useState('')
+  const [selectedType, setSelectedType] = useState('')
 
   // 페이지네이션
   const [currentPage, setCurrentPage] = useState(1)
@@ -35,8 +45,8 @@ export default function FactionsAdmin() {
   }, [])
 
   useEffect(() => {
-    loadFactions()
-  }, [currentPage, searchTerm, selectedUniverse])
+    loadCompanies()
+  }, [currentPage, searchTerm, selectedUniverse, selectedType])
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -45,12 +55,13 @@ export default function FactionsAdmin() {
     }
   }
 
-  const loadFactions = async () => {
+  const loadCompanies = async () => {
     try {
       setLoading(true)
       let query = supabase
-        .from('factions')
+        .from('companies')
         .select('*', { count: 'exact' })
+        .eq('is_active', true)
         .order('sort_order')
 
       // 검색 필터
@@ -63,6 +74,11 @@ export default function FactionsAdmin() {
         query = query.eq('universe', selectedUniverse)
       }
 
+      // 타입 필터
+      if (selectedType) {
+        query = query.eq('company_type', selectedType)
+      }
+
       // 페이지네이션
       const from = (currentPage - 1) * itemsPerPage
       const to = from + itemsPerPage - 1
@@ -71,10 +87,30 @@ export default function FactionsAdmin() {
       const { data, error, count } = await query
 
       if (error) throw error
-      setFactions(data || [])
+      setCompanies(data || [])
       setTotalCount(count || 0)
+
+      // 기체 수 조회
+      if (data && data.length > 0) {
+        const companyIds = data.map((c: any) => c.id)
+        const { data: msData } = await supabase
+          .from('mobile_suits')
+          .select('company_id')
+          .in('company_id', companyIds)
+
+        // company_id별 count 계산
+        const counts: Record<string, number> = {}
+        if (msData) {
+          msData.forEach((ms: any) => {
+            if (ms.company_id) {
+              counts[ms.company_id] = (counts[ms.company_id] || 0) + 1
+            }
+          })
+        }
+        setMsCounts(counts)
+      }
     } catch (error: any) {
-      console.error('Factions 로딩 오류:', error)
+      console.error('Companies 로딩 오류:', error)
       alert(`오류: ${error.message}`)
     } finally {
       setLoading(false)
@@ -82,18 +118,18 @@ export default function FactionsAdmin() {
   }
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`"${name}" 진영을 삭제하시겠습니까?`)) return
+    if (!confirm(`"${name}" 제조사를 삭제하시겠습니까?`)) return
 
     try {
       const { error } = await supabase
-        .from('factions')
-        .delete()
+        .from('companies')
+        .update({ is_active: false })
         .eq('id', id)
 
       if (error) throw error
 
       alert('삭제되었습니다!')
-      loadFactions()
+      loadCompanies()
     } catch (error: any) {
       console.error('삭제 오류:', error)
       alert(`삭제 실패: ${error.message}`)
@@ -116,12 +152,17 @@ export default function FactionsAdmin() {
     return pages
   }
 
-  if (loading && factions.length === 0) {
+  const getTypeName = (type: string) => {
+    const found = COMPANY_TYPES.find(t => t.code === type)
+    return found ? found.name : type
+  }
+
+  if (loading && companies.length === 0) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
-          <p className="text-gray-900 font-medium">진영 목록을 불러오는 중...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
+          <p className="text-gray-900 font-medium">제조사 목록을 불러오는 중...</p>
         </div>
       </div>
     )
@@ -142,15 +183,15 @@ export default function FactionsAdmin() {
                 </svg>
               </Link>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">⚔️ 진영/조직 관리</h1>
+                <h1 className="text-3xl font-bold text-gray-900">🏭 제조사/기업 관리</h1>
                 <p className="text-sm text-gray-600 mt-1">총 {totalCount}개</p>
               </div>
             </div>
             <Link
-              href="/admin/factions/new"
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              href="/admin/companies/new"
+              className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
             >
-              + 진영 추가
+              + 제조사 추가
             </Link>
           </div>
         </div>
@@ -175,7 +216,7 @@ export default function FactionsAdmin() {
               />
             </div>
 
-            {/* 세계관 필터 - 뱃지 형태 */}
+            {/* 세계관 필터 */}
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <label className="block text-sm font-medium text-gray-700">세계관 필터</label>
@@ -185,7 +226,7 @@ export default function FactionsAdmin() {
                       setSelectedUniverse('')
                       setCurrentPage(1)
                     }}
-                    className="text-xs text-red-600 hover:text-red-800"
+                    className="text-xs text-teal-600 hover:text-teal-800"
                   >
                     전체 해제
                   </button>
@@ -203,7 +244,7 @@ export default function FactionsAdmin() {
                       }}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                         isSelected
-                          ? 'bg-red-600 text-white shadow-md'
+                          ? 'bg-teal-600 text-white shadow-md'
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                     >
@@ -213,10 +254,49 @@ export default function FactionsAdmin() {
                 })}
               </div>
             </div>
+
+            {/* 타입 필터 */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <label className="block text-sm font-medium text-gray-700">유형 필터</label>
+                {selectedType && (
+                  <button
+                    onClick={() => {
+                      setSelectedType('')
+                      setCurrentPage(1)
+                    }}
+                    className="text-xs text-teal-600 hover:text-teal-800"
+                  >
+                    전체 해제
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {COMPANY_TYPES.map((type) => {
+                  const isSelected = selectedType === type.code
+                  return (
+                    <button
+                      key={type.code}
+                      onClick={() => {
+                        setSelectedType(isSelected ? '' : type.code)
+                        setCurrentPage(1)
+                      }}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                        isSelected
+                          ? 'bg-teal-600 text-white shadow-md'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {type.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* 진영 테이블 */}
+        {/* 제조사 테이블 */}
         <div className="bg-white rounded-xl shadow overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -232,10 +312,13 @@ export default function FactionsAdmin() {
                     세계관
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    색상
+                    유형
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    순서
+                    기체 수
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    색상
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     작업
@@ -243,57 +326,64 @@ export default function FactionsAdmin() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {factions.length === 0 ? (
+                {companies.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                      {searchTerm || selectedUniverse ? '검색 결과가 없습니다.' : '등록된 진영이 없습니다.'}
+                    <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                      {searchTerm || selectedUniverse || selectedType ? '검색 결과가 없습니다.' : '등록된 제조사가 없습니다.'}
                     </td>
                   </tr>
                 ) : (
-                  factions.map((faction) => (
-                    <tr key={faction.id} className="hover:bg-gray-50">
+                  companies.map((company) => (
+                    <tr key={company.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="font-mono text-sm text-gray-900 bg-gray-100 px-2 py-1 rounded">
-                          {faction.code}
+                          {company.code}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="font-medium text-gray-900">{faction.name_ko}</div>
-                        {faction.name_en && (
-                          <div className="text-sm text-gray-500">{faction.name_en}</div>
+                        <div className="font-medium text-gray-900">{company.name_ko}</div>
+                        {company.name_en && (
+                          <div className="text-sm text-gray-500">{company.name_en}</div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                          {faction.universe || '-'}
+                        <span className="px-2 py-1 rounded text-xs font-medium bg-teal-100 text-teal-800">
+                          {company.universe || '-'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {faction.color ? (
+                        <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                          {getTypeName(company.company_type) || '-'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-800">
+                          {msCounts[company.id] || 0}기
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {company.color ? (
                           <div className="flex items-center gap-2">
                             <div 
                               className="w-8 h-8 rounded border border-gray-300"
-                              style={{ backgroundColor: faction.color }}
+                              style={{ backgroundColor: company.color }}
                             />
-                            <span className="text-sm text-gray-600">{faction.color}</span>
+                            <span className="text-sm text-gray-600">{company.color}</span>
                           </div>
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {faction.sort_order || 0}
-                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                         <div className="flex items-center justify-end gap-2">
                           <Link
-                            href={`/admin/factions/${faction.id}/edit`}
-                            className="text-red-600 hover:text-red-800 font-medium"
+                            href={`/admin/companies/${company.id}/edit`}
+                            className="text-teal-600 hover:text-teal-800 font-medium"
                           >
                             수정
                           </Link>
                           <button
-                            onClick={() => handleDelete(faction.id, faction.name_ko)}
+                            onClick={() => handleDelete(company.id, company.name_ko)}
                             className="text-red-600 hover:text-red-800 font-medium"
                           >
                             삭제
@@ -336,7 +426,7 @@ export default function FactionsAdmin() {
                       onClick={() => setCurrentPage(page)}
                       className={`px-3 py-1 rounded-lg text-sm font-medium ${
                         currentPage === page
-                          ? 'bg-red-600 text-white'
+                          ? 'bg-teal-600 text-white'
                           : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
                       }`}
                     >

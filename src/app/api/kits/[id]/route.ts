@@ -76,18 +76,42 @@ export async function GET(
       if (mobileSuit) {
         // Step 6: faction 정보 가져오기
         let factionData = null
-        if (mobileSuit.faction_default_id) {
+        if (mobileSuit.faction_id) {
           const { data: faction } = await supabase
             .from('factions')
             .select('*')
-            .eq('id', mobileSuit.faction_default_id)
+            .eq('id', mobileSuit.faction_id)
             .single()
           factionData = faction
+        }
+
+        // Step 6-1: company 정보 가져오기
+        let companyData = null
+        if (mobileSuit.company_id) {
+          const { data: company } = await supabase
+            .from('companies')
+            .select('*')
+            .eq('id', mobileSuit.company_id)
+            .single()
+          companyData = company
+        }
+
+        // Step 6-2: pilot 정보 가져오기
+        let pilotData = null
+        if (mobileSuit.pilot_id) {
+          const { data: pilot } = await supabase
+            .from('pilots')
+            .select('*')
+            .eq('id', mobileSuit.pilot_id)
+            .single()
+          pilotData = pilot
         }
         
         mobileSuitData = {
           ...mobileSuit,
-          factions: factionData
+          factions: factionData,
+          company: companyData,
+          pilot: pilotData
         }
       }
     }

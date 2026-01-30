@@ -159,7 +159,7 @@ export default function EditSeriesPage() {
                 value={formData.name_ko}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 bg-white"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900 bg-white"
                 placeholder="예: 기동전사 건담 GQuuuuuuX"
               />
             </div>
@@ -174,7 +174,7 @@ export default function EditSeriesPage() {
                 name="name_en"
                 value={formData.name_en}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 bg-white"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900 bg-white"
                 placeholder="예: Mobile Suit Gundam GQuuuuuuX"
               />
             </div>
@@ -189,7 +189,7 @@ export default function EditSeriesPage() {
                 name="name_ja"
                 value={formData.name_ja}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 bg-white"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900 bg-white"
                 placeholder="예: 機動戦士ガンダム GQuuuuuuX"
               />
             </div>
@@ -204,7 +204,7 @@ export default function EditSeriesPage() {
                 value={formData.description}
                 onChange={handleChange}
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 bg-white"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900 bg-white"
                 placeholder="시리즈에 대한 설명을 입력하세요..."
               />
             </div>

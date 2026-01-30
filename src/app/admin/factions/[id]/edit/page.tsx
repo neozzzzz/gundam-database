@@ -181,7 +181,7 @@ export default function EditFaction() {
                     onChange={handleChange}
                     required
                     maxLength={20}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-mono uppercase"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900 font-mono uppercase"
                   />
                 </div>
 
@@ -194,7 +194,7 @@ export default function EditFaction() {
                     name="sort_order"
                     value={formData.sort_order}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900"
                   />
                 </div>
 
@@ -208,7 +208,7 @@ export default function EditFaction() {
                     value={formData.name_ko}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900"
                   />
                 </div>
 
@@ -221,7 +221,7 @@ export default function EditFaction() {
                     name="name_en"
                     value={formData.name_en}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900"
                   />
                 </div>
 
@@ -234,7 +234,7 @@ export default function EditFaction() {
                     name="name_ja"
                     value={formData.name_ja}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900"
                   />
                 </div>
               </div>
@@ -255,7 +255,7 @@ export default function EditFaction() {
                     name="universe"
                     value={formData.universe}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900"
                   >
                     <option value="UC">UC (Universal Century)</option>
                     <option value="CE">CE (Cosmic Era)</option>
@@ -288,7 +288,7 @@ export default function EditFaction() {
                       value={formData.color}
                       onChange={handleChange}
                       maxLength={7}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-mono"
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900 font-mono"
                     />
                   </div>
                 </div>
@@ -301,7 +301,7 @@ export default function EditFaction() {
                     name="parent_id"
                     value={formData.parent_id}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900"
                   >
                     <option value="">없음</option>
                     {factions.filter(f => f.id !== factionId).map(f => (
@@ -323,7 +323,7 @@ export default function EditFaction() {
               value={formData.description}
               onChange={handleChange}
               rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900"
             />
           </div>
 

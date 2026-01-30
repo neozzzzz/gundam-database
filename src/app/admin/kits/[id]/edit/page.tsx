@@ -4,6 +4,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter, useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import ImageUpload from '@/components/image-upload'
 
 export default function EditKit() {
   const router = useRouter()
@@ -15,9 +16,10 @@ export default function EditKit() {
   const [saving, setSaving] = useState(false)
   const [grades, setGrades] = useState<any[]>([])
   const [series, setSeries] = useState<any[]>([])
-  const [brands, setBrands] = useState<any[]>([])
-  const [mobileSuits, setMobileSuits] = useState<any[]>([]) // ⭐
-  const [searchTerm, setSearchTerm] = useState('') // ⭐
+  const [mobileSuits, setMobileSuits] = useState<any[]>([])
+  const [factions, setFactions] = useState<any[]>([])
+  const [factionsMap, setFactionsMap] = useState<Record<string, any>>({})
+  const [searchTerm, setSearchTerm] = useState('')
   
   const scaleOptions = ['1/144', '1/100', '1/60', 'Non-scale']
   
@@ -26,8 +28,7 @@ export default function EditKit() {
     name_en: '',
     grade_id: '',
     series_id: '',
-    brand_id: '',
-    mobile_suit_id: '', // ⭐
+    mobile_suit_id: '',
     scale: '1/144',
     price_krw: '',
     price_jpy: '',
@@ -35,6 +36,7 @@ export default function EditKit() {
     release_date: '',
     description: '',
     status: 'active',
+    box_art_url: '',
   })
 
   useEffect(() => {
@@ -60,48 +62,44 @@ export default function EditKit() {
       alert('접근 권한이 없습니다.')
       await supabase.auth.signOut()
       router.push('/admin/login')
-      return
     }
   }
 
   const loadData = async () => {
     try {
+      // 등급 로드
       const { data: gradesData } = await supabase
         .from('grades')
         .select('*')
         .order('sort_order')
       
+      // 시리즈 로드
       const { data: seriesData } = await supabase
         .from('series')
         .select('*')
         .order('name_ko')
-      
-      const { data: brandsData } = await supabase
-        .from('brands')
+
+      // 진영 로드
+      const { data: factionsData } = await supabase
+        .from('factions')
         .select('*')
         .order('sort_order')
 
-      // ⭐ 모빌슈트 로드
+      // 모빌슈트 로드 (간소화된 쿼리)
       const { data: mobileSuitsData } = await supabase
         .from('mobile_suits')
-        .select(`
-          id,
-          name_ko,
-          name_en,
-          model_number,
-          faction,
-          pilot,
-          organization:organizations(
-            name_ko,
-            faction
-          )
-        `)
+        .select('id, name_ko, name_en, model_number, faction_id')
         .order('name_ko')
 
       setGrades(gradesData || [])
       setSeries(seriesData || [])
-      setBrands(brandsData || [])
-      setMobileSuits(mobileSuitsData || []) // ⭐
+      setFactions(factionsData || [])
+      setMobileSuits(mobileSuitsData || [])
+      
+      // 진영 맵 생성
+      const fMap: Record<string, any> = {}
+      factionsData?.forEach(f => { fMap[f.id] = f })
+      setFactionsMap(fMap)
     } catch (error) {
       console.error('데이터 로딩 오류:', error)
     }
@@ -131,8 +129,7 @@ export default function EditKit() {
           name_en: data.name_en || '',
           grade_id: data.grade_id || '',
           series_id: data.series_id || '',
-          brand_id: data.brand_id || '',
-          mobile_suit_id: data.mobile_suit_id || '', // ⭐
+          mobile_suit_id: data.mobile_suit_id || '',
           scale: data.scale || '1/144',
           price_krw: data.price_krw?.toString() || '',
           price_jpy: data.price_jpy?.toString() || '',
@@ -140,12 +137,13 @@ export default function EditKit() {
           release_date: formattedDate,
           description: data.description || '',
           status: data.status || 'active',
+          box_art_url: data.box_art_url || '',
         })
       }
     } catch (error: any) {
       console.error('킷 로딩 오류:', error)
       alert(`킷 로딩 실패: ${error.message}`)
-      router.push('/admin')
+      router.push('/admin/kits')
     } finally {
       setLoading(false)
     }
@@ -154,16 +152,20 @@ export default function EditKit() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    if (!formData.name_ko.trim()) {
+      alert('킷 이름(한글)은 필수입니다.')
+      return
+    }
+
     try {
       setSaving(true)
 
-      const kitData: any = {
+      const kitData = {
         name_ko: formData.name_ko.trim(),
         name_en: formData.name_en?.trim() || null,
         grade_id: formData.grade_id || null,
         series_id: formData.series_id || null,
-        brand_id: formData.brand_id || null,
-        mobile_suit_id: formData.mobile_suit_id || null, // ⭐
+        mobile_suit_id: formData.mobile_suit_id || null,
         scale: formData.scale || null,
         price_krw: formData.price_krw ? parseInt(formData.price_krw) : null,
         price_jpy: formData.price_jpy ? parseInt(formData.price_jpy) : null,
@@ -171,33 +173,28 @@ export default function EditKit() {
         release_date: formData.release_date || null,
         description: formData.description?.trim() || null,
         status: formData.status,
+        box_art_url: formData.box_art_url || null,
         updated_at: new Date().toISOString(),
       }
 
-      const { data: updatedData, error } = await supabase
+      const { error } = await supabase
         .from('gundam_kits')
         .update(kitData)
         .eq('id', kitId)
-        .select()
 
       if (error) throw error
 
-      if (!updatedData || updatedData.length === 0) {
-        throw new Error('데이터가 수정되지 않았습니다.')
-      }
-
-      alert('✅ 킷이 성공적으로 수정되었습니다!')
-      router.push('/admin?refresh=true')
-      
+      alert('킷이 성공적으로 수정되었습니다!')
+      router.push('/admin/kits')
     } catch (error: any) {
-      console.error('킷 수정 실패:', error)
-      alert(`수정 실패: ${error.message}`)
+      console.error('킷 수정 오류:', error)
+      alert(`오류: ${error.message}`)
     } finally {
       setSaving(false)
     }
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
@@ -211,7 +208,7 @@ export default function EditKit() {
     })
   }
 
-  // ⭐ 모빌슈트 필터링
+  // 모빌슈트 필터링
   const filteredMobileSuits = mobileSuits.filter(ms => {
     const search = searchTerm.toLowerCase()
     return (
@@ -221,16 +218,13 @@ export default function EditKit() {
     )
   })
 
-  // ⭐ 선택된 모빌슈트
+  // 선택된 모빌슈트
   const selectedMobileSuit = mobileSuits.find(ms => ms.id === formData.mobile_suit_id)
 
-  // ⭐ 진영 색상
-  const FACTION_COLORS: Record<string, string> = {
-    'EF': 'bg-blue-500/20 text-blue-600 border-blue-300',
-    'ZEON': 'bg-red-500/20 text-red-600 border-red-300',
-    'PLANT': 'bg-green-500/20 text-green-600 border-green-300',
-    'CB': 'bg-purple-500/20 text-purple-600 border-purple-300',
-    'OTHER': 'bg-gray-500/20 text-gray-600 border-gray-300',
+  // 진영 정보 가져오기
+  const getFaction = (factionId: string) => {
+    if (!factionId) return null
+    return factionsMap[factionId] || null
   }
 
   if (loading) {
@@ -250,7 +244,7 @@ export default function EditKit() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center gap-4">
             <Link 
-              href="/admin"
+              href="/admin/kits"
               className="text-gray-600 hover:text-gray-900"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -258,7 +252,7 @@ export default function EditKit() {
               </svg>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">킷 수정</h1>
+              <h1 className="text-3xl font-bold text-gray-900">📦 킷 수정</h1>
               <p className="text-sm text-gray-600 mt-1">{formData.name_ko}</p>
             </div>
           </div>
@@ -267,6 +261,21 @@ export default function EditKit() {
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow p-8">
+          {/* 박스아트 이미지 */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">박스아트</h2>
+            <div className="max-w-xs">
+              <ImageUpload
+                value={formData.box_art_url}
+                onChange={(url) => setFormData({ ...formData, box_art_url: url })}
+                bucket="images"
+                folder="kits"
+                aspectRatio="aspect-[4/3]"
+                placeholder="박스아트 이미지"
+              />
+            </div>
+          </div>
+
           {/* 기본 정보 */}
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">기본 정보</h2>
@@ -283,7 +292,7 @@ export default function EditKit() {
                     value={formData.name_ko}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900 bg-white"
                   />
                 </div>
 
@@ -296,7 +305,7 @@ export default function EditKit() {
                     name="name_en"
                     value={formData.name_en}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900 bg-white"
                   />
                 </div>
               </div>
@@ -316,7 +325,7 @@ export default function EditKit() {
                         onClick={() => handleToggle('grade_id', grade.id)}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                           isSelected
-                            ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-600 ring-offset-2'
+                            ? 'bg-blue-600 text-white shadow-md'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                       >
@@ -330,9 +339,9 @@ export default function EditKit() {
               {/* 시리즈 (토글) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  시리즈 (선택사항)
+                  시리즈
                 </label>
-                <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto p-2 border border-gray-200 rounded-lg">
+                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 border border-gray-200 rounded-lg">
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, series_id: '' })}
@@ -353,48 +362,11 @@ export default function EditKit() {
                         onClick={() => handleToggle('series_id', s.id)}
                         className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                           isSelected
-                            ? 'bg-purple-600 text-white shadow-md ring-2 ring-purple-600 ring-offset-2'
+                            ? 'bg-purple-600 text-white shadow-md'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                       >
                         {s.name_ko}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* 브랜드 (토글) */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  브랜드 (선택사항)
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, brand_id: '' })}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                      formData.brand_id === ''
-                        ? 'bg-gray-600 text-white shadow-md'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    선택 안 함
-                  </button>
-                  {brands.map((brand) => {
-                    const isSelected = formData.brand_id === brand.id
-                    return (
-                      <button
-                        key={brand.id}
-                        type="button"
-                        onClick={() => handleToggle('brand_id', brand.id)}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                          isSelected
-                            ? 'bg-green-600 text-white shadow-md ring-2 ring-green-600 ring-offset-2'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        {brand.code}
                       </button>
                     )
                   })}
@@ -416,7 +388,7 @@ export default function EditKit() {
                         onClick={() => handleToggle('scale', scale)}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                           isSelected
-                            ? 'bg-orange-600 text-white shadow-md ring-2 ring-orange-600 ring-offset-2'
+                            ? 'bg-orange-600 text-white shadow-md'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                       >
@@ -429,16 +401,15 @@ export default function EditKit() {
             </div>
           </div>
 
-          {/* ⭐ 모빌슈트 선택 */}
+          {/* 모빌슈트 연결 */}
           <div className="mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <span>🤖</span>
-              <span>모빌슈트</span>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              모빌슈트 연결 (선택사항)
             </h2>
 
             {/* 선택된 모빌슈트 표시 */}
             {selectedMobileSuit && (
-              <div className={`mb-4 p-4 rounded-lg border-2 ${FACTION_COLORS[selectedMobileSuit.faction || 'OTHER']}`}>
+              <div className="mb-4 p-4 rounded-lg border-2 border-blue-300 bg-blue-50">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="font-bold text-lg text-gray-900">{selectedMobileSuit.name_ko}</div>
@@ -447,18 +418,16 @@ export default function EditKit() {
                         {selectedMobileSuit.model_number}
                       </div>
                     )}
-                    <div className="flex gap-2 mt-2">
-                      {selectedMobileSuit.faction && (
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${FACTION_COLORS[selectedMobileSuit.faction]}`}>
-                          {selectedMobileSuit.faction}
+                    {selectedMobileSuit.faction_id && getFaction(selectedMobileSuit.faction_id) && (
+                      <div className="mt-2">
+                        <span 
+                          className="px-2 py-1 rounded text-xs font-medium text-white"
+                          style={{ backgroundColor: getFaction(selectedMobileSuit.faction_id)?.color || '#6B7280' }}
+                        >
+                          {getFaction(selectedMobileSuit.faction_id)?.name_ko}
                         </span>
-                      )}
-                      {selectedMobileSuit.pilot && (
-                        <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
-                          파일럿: {selectedMobileSuit.pilot}
-                        </span>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -483,7 +452,7 @@ export default function EditKit() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="이름, 모델 넘버로 검색..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900 bg-white"
               />
             </div>
 
@@ -491,7 +460,7 @@ export default function EditKit() {
             <div className="max-h-80 overflow-y-auto border border-gray-300 rounded-lg">
               {filteredMobileSuits.length === 0 ? (
                 <div className="p-4 text-center text-gray-500">
-                  {searchTerm ? '검색 결과가 없습니다' : '모빌슈트를 불러오는 중...'}
+                  {searchTerm ? '검색 결과가 없습니다' : '등록된 모빌슈트가 없습니다'}
                 </div>
               ) : (
                 <div className="divide-y divide-gray-200">
@@ -504,31 +473,37 @@ export default function EditKit() {
                   >
                     <div className="text-gray-500 text-sm">선택 안 함</div>
                   </button>
-                  {filteredMobileSuits.map((ms) => (
-                    <button
-                      key={ms.id}
-                      type="button"
-                      onClick={() => {
-                        setFormData({ ...formData, mobile_suit_id: ms.id })
-                        setSearchTerm('')
-                      }}
-                      className={`w-full p-3 text-left hover:bg-blue-50 transition-colors ${
-                        formData.mobile_suit_id === ms.id ? 'bg-blue-100' : ''
-                      }`}
-                    >
-                      <div className="font-medium text-gray-900">{ms.name_ko}</div>
-                      {ms.model_number && (
-                        <div className="text-sm text-gray-600 font-mono">{ms.model_number}</div>
-                      )}
-                      <div className="flex gap-2 mt-1">
-                        {ms.faction && (
-                          <span className={`px-2 py-0.5 rounded text-xs ${FACTION_COLORS[ms.faction]}`}>
-                            {ms.faction}
-                          </span>
+                  {filteredMobileSuits.map((ms) => {
+                    const faction = getFaction(ms.faction_id)
+                    return (
+                      <button
+                        key={ms.id}
+                        type="button"
+                        onClick={() => {
+                          setFormData({ ...formData, mobile_suit_id: ms.id })
+                          setSearchTerm('')
+                        }}
+                        className={`w-full p-3 text-left hover:bg-blue-50 transition-colors ${
+                          formData.mobile_suit_id === ms.id ? 'bg-blue-100' : ''
+                        }`}
+                      >
+                        <div className="font-medium text-gray-900">{ms.name_ko}</div>
+                        {ms.model_number && (
+                          <div className="text-sm text-gray-600 font-mono">{ms.model_number}</div>
                         )}
-                      </div>
-                    </button>
-                  ))}
+                        {faction && (
+                          <div className="mt-1">
+                            <span 
+                              className="px-2 py-0.5 rounded text-xs text-white"
+                              style={{ backgroundColor: faction.color || '#6B7280' }}
+                            >
+                              {faction.name_ko}
+                            </span>
+                          </div>
+                        )}
+                      </button>
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -548,7 +523,8 @@ export default function EditKit() {
                   name="price_krw"
                   value={formData.price_krw}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  placeholder="25000"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900 bg-white"
                 />
               </div>
 
@@ -561,7 +537,8 @@ export default function EditKit() {
                   name="price_jpy"
                   value={formData.price_jpy}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  placeholder="2500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900 bg-white"
                 />
               </div>
             </div>
@@ -571,77 +548,81 @@ export default function EditKit() {
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">추가 정보</h2>
             
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    제품 코드
-                  </label>
-                  <input
-                    type="text"
-                    name="product_code"
-                    value={formData.product_code}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    출시일
-                  </label>
-                  <input
-                    type="date"
-                    name="release_date"
-                    value={formData.release_date}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                  />
-                </div>
-              </div>
-
-              {/* 상태 (토글) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  상태
+                  제품 코드
                 </label>
-                <div className="flex gap-2">
-                  {[
-                    { value: 'active', label: '활성' },
-                    { value: 'discontinued', label: '단종' },
-                    { value: 'upcoming', label: '출시 예정' }
-                  ].map(({ value, label }) => {
-                    const isSelected = formData.status === value
-                    return (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, status: value })}
-                        className={`flex-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                          isSelected
-                            ? 'bg-blue-600 text-white shadow-md'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  설명
-                </label>
-                <textarea
-                  name="description"
-                  value={formData.description}
+                <input
+                  type="text"
+                  name="product_code"
+                  value={formData.product_code}
                   onChange={handleChange}
-                  rows={4}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  placeholder="BAN123456"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900 bg-white font-mono"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  발매일
+                </label>
+                <input
+                  type="date"
+                  name="release_date"
+                  value={formData.release_date}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900 bg-white"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                설명
+              </label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                rows={4}
+                placeholder="킷에 대한 설명..."
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900 bg-white"
+              />
+            </div>
+          </div>
+
+          {/* 상태 */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">상태</h2>
+            <div className="flex gap-4">
+              {['active', 'discontinued', 'upcoming'].map((status) => {
+                const isSelected = formData.status === status
+                const labels: Record<string, string> = {
+                  'active': '판매중',
+                  'discontinued': '단종',
+                  'upcoming': '출시예정',
+                }
+                const colors: Record<string, string> = {
+                  'active': 'bg-green-600',
+                  'discontinued': 'bg-gray-600',
+                  'upcoming': 'bg-yellow-600',
+                }
+                return (
+                  <button
+                    key={status}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, status })}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      isSelected
+                        ? `${colors[status]} text-white shadow-md`
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {labels[status]}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
@@ -652,11 +633,11 @@ export default function EditKit() {
               disabled={saving}
               className="flex-1 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {saving ? '저장 중...' : '✅ 수정 완료'}
+              {saving ? '저장 중...' : '수정 완료'}
             </button>
             <Link
-              href="/admin"
-              className="px-6 py-3 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors text-center flex items-center justify-center"
+              href="/admin/kits"
+              className="px-6 py-3 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors text-center"
             >
               취소
             </Link>

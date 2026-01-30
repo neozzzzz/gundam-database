@@ -5,13 +5,15 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 
-export default function MobileSuitsAdmin() {
+export default function PilotsAdmin() {
   const router = useRouter()
   const supabase = createClientComponentClient()
   
   const [loading, setLoading] = useState(true)
-  const [mobileSuits, setMobileSuits] = useState<any[]>([])
+  const [pilots, setPilots] = useState<any[]>([])
   const [factions, setFactions] = useState<any[]>([])
+  const [factionsMap, setFactionsMap] = useState<Record<string, any>>({})
+  const [msCounts, setMsCounts] = useState<Record<string, number>>({})
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFaction, setSelectedFaction] = useState('')
 
@@ -26,8 +28,10 @@ export default function MobileSuitsAdmin() {
   }, [])
 
   useEffect(() => {
-    loadMobileSuits()
-  }, [currentPage, searchTerm, selectedFaction])
+    if (Object.keys(factionsMap).length > 0 || factions.length === 0) {
+      loadPilots()
+    }
+  }, [currentPage, searchTerm, selectedFaction, factionsMap])
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -37,36 +41,46 @@ export default function MobileSuitsAdmin() {
   }
 
   const loadFactions = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('factions')
       .select('*')
       .order('sort_order')
     
-    setFactions(data || [])
+    if (error) {
+      console.error('진영 로딩 오류:', error)
+    }
+    
+    const factionsList = data || []
+    setFactions(factionsList)
+    
+    // ID를 키로 하는 맵 생성
+    const map: Record<string, any> = {}
+    factionsList.forEach(f => {
+      map[f.id] = f
+    })
+    setFactionsMap(map)
   }
 
-  const loadMobileSuits = async () => {
+  const loadPilots = async () => {
     try {
       setLoading(true)
+      
+      // 관계 조회 없이 pilots만 조회
       let query = supabase
-        .from('mobile_suits')
-        .select(`
-          *,
-          series:series(id, name_ko),
-          faction:factions(id, name_ko, code, color)
-        `, { count: 'exact' })
+        .from('pilots')
+        .select('*', { count: 'exact' })
         .order('updated_at', { ascending: false })
 
       // 검색 필터
       if (searchTerm) {
-        query = query.or(`name_ko.ilike.%${searchTerm}%,name_en.ilike.%${searchTerm}%,model_number.ilike.%${searchTerm}%`)
+        query = query.or(`name_ko.ilike.%${searchTerm}%,name_en.ilike.%${searchTerm}%`)
       }
 
-      // 진영 필터
+      // 진영 필터 (affiliation_default_id 사용)
       if (selectedFaction) {
         const faction = factions.find(f => f.code === selectedFaction)
         if (faction) {
-          query = query.eq('faction_id', faction.id)
+          query = query.eq('affiliation_default_id', faction.id)
         }
       }
 
@@ -78,10 +92,30 @@ export default function MobileSuitsAdmin() {
       const { data, error, count } = await query
 
       if (error) throw error
-      setMobileSuits(data || [])
+      setPilots(data || [])
       setTotalCount(count || 0)
+
+      // 탑승 기체 수 조회
+      if (data && data.length > 0) {
+        const pilotIds = data.map((p: any) => p.id)
+        const { data: msData } = await supabase
+          .from('mobile_suits')
+          .select('pilot_id')
+          .in('pilot_id', pilotIds)
+
+        // pilot_id별 count 계산
+        const counts: Record<string, number> = {}
+        if (msData) {
+          msData.forEach((ms: any) => {
+            if (ms.pilot_id) {
+              counts[ms.pilot_id] = (counts[ms.pilot_id] || 0) + 1
+            }
+          })
+        }
+        setMsCounts(counts)
+      }
     } catch (error: any) {
-      console.error('모빌슈트 로딩 오류:', error)
+      console.error('파일럿 로딩 오류:', error)
       alert(`오류: ${error.message}`)
     } finally {
       setLoading(false)
@@ -89,37 +123,38 @@ export default function MobileSuitsAdmin() {
   }
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`"${name}" 모빌슈트를 삭제하시겠습니까?\n\n⚠️ 이 모빌슈트를 사용하는 킷들은 연결이 해제됩니다.`)) {
-      return
-    }
+    if (!confirm(`"${name}" 파일럿을 삭제하시겠습니까?`)) return
 
     try {
       const { error } = await supabase
-        .from('mobile_suits')
+        .from('pilots')
         .delete()
         .eq('id', id)
 
       if (error) throw error
 
       alert('삭제되었습니다!')
-      loadMobileSuits()
+      loadPilots()
     } catch (error: any) {
       console.error('삭제 오류:', error)
       alert(`삭제 실패: ${error.message}`)
     }
   }
 
-  const getFactionColor = (factionCode: string) => {
-    const colors: any = {
-      'EFSF': 'bg-blue-500/20 text-blue-800',
-      'ZEON': 'bg-red-500/20 text-red-800',
-      'TITANS': 'bg-indigo-500/20 text-indigo-800',
-      'AEUG': 'bg-green-500/20 text-green-800',
-      'NEO_ZEON': 'bg-orange-500/20 text-orange-800',
-      'PLANT': 'bg-green-500/20 text-green-800',
-      'CB': 'bg-purple-500/20 text-purple-800',
+  // 진영 정보 가져오기
+  const getFaction = (affiliationId: string) => {
+    if (!affiliationId) return null
+    return factionsMap[affiliationId] || null
+  }
+
+  const getRoleLabel = (role: string) => {
+    const roles: any = {
+      'protagonist': '주인공',
+      'antagonist': '적대자',
+      'supporting': '조연',
+      'other': '기타',
     }
-    return colors[factionCode] || 'bg-gray-500/20 text-gray-800'
+    return roles[role] || role || '-'
   }
 
   const totalPages = Math.ceil(totalCount / itemsPerPage)
@@ -138,12 +173,12 @@ export default function MobileSuitsAdmin() {
     return pages
   }
 
-  if (loading && mobileSuits.length === 0) {
+  if (loading && pilots.length === 0) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
-          <p className="text-gray-900 font-medium">모빌슈트 목록을 불러오는 중...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-900 font-medium">파일럿 목록을 불러오는 중...</p>
         </div>
       </div>
     )
@@ -164,15 +199,15 @@ export default function MobileSuitsAdmin() {
                 </svg>
               </Link>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">🤖 모빌슈트 관리</h1>
+                <h1 className="text-3xl font-bold text-gray-900">👤 파일럿 관리</h1>
                 <p className="text-sm text-gray-600 mt-1">총 {totalCount}개</p>
               </div>
             </div>
             <Link
-              href="/admin/mobile-suits/new"
-              className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+              href="/admin/pilots/new"
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
-              + 모빌슈트 추가
+              + 파일럿 추가
             </Link>
           </div>
         </div>
@@ -192,8 +227,8 @@ export default function MobileSuitsAdmin() {
                   setSearchTerm(e.target.value)
                   setCurrentPage(1)
                 }}
-                placeholder="이름, 모델번호 검색..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900 bg-white"
+                placeholder="파일럿 이름 검색..."
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-gray-900  focus:ring-0 text-gray-900 bg-white"
               />
             </div>
 
@@ -207,38 +242,43 @@ export default function MobileSuitsAdmin() {
                       setSelectedFaction('')
                       setCurrentPage(1)
                     }}
-                    className="text-xs text-orange-600 hover:text-orange-800"
+                    className="text-xs text-green-600 hover:text-green-800"
                   >
                     전체 해제
                   </button>
                 )}
               </div>
               <div className="flex flex-wrap gap-2">
-                {factions.map((faction) => {
-                  const isSelected = selectedFaction === faction.code
-                  return (
-                    <button
-                      key={faction.id}
-                      onClick={() => {
-                        setSelectedFaction(isSelected ? '' : faction.code)
-                        setCurrentPage(1)
-                      }}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                        isSelected
-                          ? 'bg-orange-600 text-white shadow-md'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {faction.name_ko}
-                    </button>
-                  )
-                })}
+                {factions.length === 0 ? (
+                  <p className="text-sm text-gray-500">등록된 진영이 없습니다</p>
+                ) : (
+                  factions.map((faction) => {
+                    const isSelected = selectedFaction === faction.code
+                    return (
+                      <button
+                        key={faction.id}
+                        onClick={() => {
+                          setSelectedFaction(isSelected ? '' : faction.code)
+                          setCurrentPage(1)
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                          isSelected
+                            ? 'text-white shadow-md'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                        style={isSelected ? { backgroundColor: faction.color || '#16A34A' } : {}}
+                      >
+                        {faction.name_ko}
+                      </button>
+                    )
+                  })
+                )}
               </div>
             </div>
           </div>
         </div>
 
-        {/* 모빌슈트 테이블 */}
+        {/* 파일럿 테이블 */}
         <div className="bg-white rounded-xl shadow overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -248,13 +288,16 @@ export default function MobileSuitsAdmin() {
                     이름
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    모델 번호
+                    코드
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    진영
+                    소속 진영
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    시리즈
+                    역할
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    탑승 기체
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     작업
@@ -262,56 +305,73 @@ export default function MobileSuitsAdmin() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {mobileSuits.length === 0 ? (
+                {pilots.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                      {searchTerm || selectedFaction ? '검색 결과가 없습니다.' : '등록된 모빌슈트가 없습니다.'}
+                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                      {searchTerm || selectedFaction ? '검색 결과가 없습니다.' : '등록된 파일럿이 없습니다.'}
                     </td>
                   </tr>
                 ) : (
-                  mobileSuits.map((ms) => (
-                    <tr key={ms.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-gray-900">{ms.name_ko}</div>
-                        {ms.name_en && (
-                          <div className="text-sm text-gray-500">{ms.name_en}</div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="font-mono text-sm text-gray-900 bg-gray-100 px-2 py-1 rounded">
-                          {ms.model_number || '-'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {ms.faction ? (
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${getFactionColor(ms.faction.code)}`}>
-                            {ms.faction.name_ko}
+                  pilots.map((pilot) => {
+                    const faction = getFaction(pilot.affiliation_default_id)
+                    return (
+                      <tr key={pilot.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4">
+                          <div className="font-medium text-gray-900">{pilot.name_ko}</div>
+                          {pilot.name_en && (
+                            <div className="text-sm text-gray-500">{pilot.name_en}</div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {pilot.code ? (
+                            <span className="font-mono text-sm text-gray-900 bg-gray-100 px-2 py-1 rounded">
+                              {pilot.code}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {faction ? (
+                            <span 
+                              className="px-2 py-1 rounded text-xs font-medium text-white"
+                              style={{ backgroundColor: faction.color || '#6B7280' }}
+                            >
+                              {faction.name_ko}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm text-gray-700">
+                            {getRoleLabel(pilot.role)}
                           </span>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {ms.series?.name_ko || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                        <div className="flex items-center justify-end gap-2">
-                          <Link
-                            href={`/admin/mobile-suits/${ms.id}/edit`}
-                            className="text-orange-600 hover:text-orange-800 font-medium"
-                          >
-                            수정
-                          </Link>
-                          <button
-                            onClick={() => handleDelete(ms.id, ms.name_ko)}
-                            className="text-red-600 hover:text-red-800 font-medium"
-                          >
-                            삭제
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-800">
+                            {msCounts[pilot.id] || 0}기
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                          <div className="flex items-center justify-end gap-2">
+                            <Link
+                              href={`/admin/pilots/${pilot.id}/edit`}
+                              className="text-green-600 hover:text-green-800 font-medium"
+                            >
+                              수정
+                            </Link>
+                            <button
+                              onClick={() => handleDelete(pilot.id, pilot.name_ko)}
+                              className="text-red-600 hover:text-red-800 font-medium"
+                            >
+                              삭제
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
                 )}
               </tbody>
             </table>
@@ -346,7 +406,7 @@ export default function MobileSuitsAdmin() {
                       onClick={() => setCurrentPage(page)}
                       className={`px-3 py-1 rounded-lg text-sm font-medium ${
                         currentPage === page
-                          ? 'bg-orange-600 text-white'
+                          ? 'bg-green-600 text-white'
                           : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
                       }`}
                     >

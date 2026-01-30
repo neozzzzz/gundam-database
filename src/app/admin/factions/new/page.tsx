@@ -133,7 +133,7 @@ export default function AddFaction() {
                     onChange={handleChange}
                     required
                     maxLength={20}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-mono uppercase"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900 font-mono uppercase"
                     placeholder="EFSF"
                   />
                   <p className="text-xs text-gray-500 mt-1">영문 대문자, 최대 20자</p>
@@ -148,7 +148,7 @@ export default function AddFaction() {
                     name="sort_order"
                     value={formData.sort_order}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900"
                     placeholder="0"
                   />
                   <p className="text-xs text-gray-500 mt-1">작을수록 먼저 표시</p>
@@ -164,7 +164,7 @@ export default function AddFaction() {
                     value={formData.name_ko}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900"
                     placeholder="지구연방군"
                   />
                 </div>
@@ -178,7 +178,7 @@ export default function AddFaction() {
                     name="name_en"
                     value={formData.name_en}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900"
                     placeholder="Earth Federation Space Force"
                   />
                 </div>
@@ -192,7 +192,7 @@ export default function AddFaction() {
                     name="name_ja"
                     value={formData.name_ja}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900"
                     placeholder="地球連邦軍"
                   />
                 </div>
@@ -214,7 +214,7 @@ export default function AddFaction() {
                     name="universe"
                     value={formData.universe}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900"
                   >
                     <option value="UC">UC (Universal Century)</option>
                     <option value="CE">CE (Cosmic Era)</option>
@@ -247,7 +247,7 @@ export default function AddFaction() {
                       value={formData.color}
                       onChange={handleChange}
                       maxLength={7}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-mono"
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900 font-mono"
                       placeholder="#0066CC"
                     />
                   </div>
@@ -262,7 +262,7 @@ export default function AddFaction() {
                     name="parent_id"
                     value={formData.parent_id}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900"
                   >
                     <option value="">없음</option>
                     {factions.map(f => (
@@ -285,7 +285,7 @@ export default function AddFaction() {
               value={formData.description}
               onChange={handleChange}
               rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-0 focus:border-gray-900 text-gray-900"
               placeholder="진영에 대한 설명..."
             />
           </div>

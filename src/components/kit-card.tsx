@@ -21,7 +21,7 @@ export function KitCard({ kit }: KitCardProps) {
     <Link href={`/kits/${kit.id}`}>
       <div className="card-threads group cursor-pointer">
         {/* 이미지 영역 */}
-        <div className="relative aspect-square mb-4 bg-secondary rounded-xl overflow-hidden">
+        <div className="relative aspect-[4/3] mb-4 bg-secondary rounded-xl overflow-hidden flex items-center justify-center">
           {(() => {
             // 1순위: box_art_url
             if (kit.box_art_url) {
@@ -29,7 +29,7 @@ export function KitCard({ kit }: KitCardProps) {
                 <img
                   src={kit.box_art_url}
                   alt={kit.name_ko}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                 />
               )
             }
@@ -39,7 +39,7 @@ export function KitCard({ kit }: KitCardProps) {
                 <img
                   src={primaryImage.image_url}
                   alt={kit.name_ko}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                 />
               )
             }
