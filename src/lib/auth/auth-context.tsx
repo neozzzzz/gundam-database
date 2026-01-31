@@ -22,8 +22,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
-  // 관리자 여부 계산
-  const isAdmin = user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL
+  // 관리자 여부 계산 (환경변수 미설정 시 false 반환)
+  const isAdmin = Boolean(
+    user?.email && 
+    process.env.NEXT_PUBLIC_ADMIN_EMAIL && 
+    user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL
+  )
 
   useEffect(() => {
     // 초기 세션 확인
