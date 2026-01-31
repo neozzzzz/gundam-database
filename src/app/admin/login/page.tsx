@@ -1,14 +1,37 @@
 'use client'
 
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 export default function AdminLogin() {
   const supabase = createClientComponentClient()
   const [loading, setLoading] = useState(false)
+  const [checking, setChecking] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const hasRedirected = useRef(false)
 
-  // middleware에서 이미 로그인된 관리자는 /admin으로 리다이렉트됨
+  useEffect(() => {
+    // 이미 로그인된 관리자인지 확인
+    const checkExistingSession = async () => {
+      if (hasRedirected.current) return
+      
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
+          if (!hasRedirected.current) {
+            hasRedirected.current = true
+            window.location.replace('/admin')
+            return
+          }
+        }
+      } catch (e) {
+        console.error('Session check error:', e)
+      }
+      setChecking(false)
+    }
+    
+    checkExistingSession()
+  }, [supabase])
 
   const handleGoogleLogin = async () => {
     try {
@@ -26,9 +49,20 @@ export default function AdminLogin() {
     } catch (error) {
       console.error('로그인 오류:', error)
       setError('로그인 중 오류가 발생했습니다.')
-    } finally {
       setLoading(false)
     }
+  }
+
+  // 세션 체크 중이면 로딩 표시
+  if (checking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-sm text-gray-500">확인 중...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -82,7 +116,7 @@ export default function AdminLogin() {
         {/* 안내 메시지 */}
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-blue-800">
-            <strong>참고:</strong> 관리자 계정(bloody80@gmail.com)만 접근할 수 있습니다.
+            <strong>참고:</strong> 관리자 계정만 접근할 수 있습니다.
           </p>
         </div>
 

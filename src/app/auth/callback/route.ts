@@ -17,11 +17,29 @@ export async function GET(request: Request) {
       await supabase.auth.exchangeCodeForSession(code)
     }
 
-    // next 파라미터로 리다이렉트 (기본값: 메인 페이지)
-    return NextResponse.redirect(new URL(next, requestUrl.origin))
+    // 클라이언트 사이드 리다이렉트 (쿠키 설정 시간 확보)
+    const redirectUrl = new URL(next, requestUrl.origin).toString()
+    
+    return new NextResponse(
+      `<!DOCTYPE html>
+      <html>
+        <head>
+          <meta http-equiv="refresh" content="0;url=${redirectUrl}">
+          <script>window.location.href="${redirectUrl}";</script>
+        </head>
+        <body>
+          <p>로그인 처리 중... 자동으로 이동하지 않으면 <a href="${redirectUrl}">여기</a>를 클릭하세요.</p>
+        </body>
+      </html>`,
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/html',
+        },
+      }
+    )
   } catch (error) {
     console.error('Auth callback error:', error)
-    // 에러가 나면 메인 페이지로 리다이렉트
     return NextResponse.redirect(new URL('/', request.url))
   }
 }
