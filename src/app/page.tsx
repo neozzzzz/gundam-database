@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { AuthButton } from '@/components/auth-button'
+import { useAuth } from '@/lib/auth/auth-context'
 
 interface Stats {
   kits: number
@@ -16,6 +17,7 @@ interface Stats {
 }
 
 export default function HomePage() {
+  const { isAdmin } = useAuth()
   const [stats, setStats] = useState<Stats>({
     kits: 0,
     grades: 0,
@@ -183,6 +185,23 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+
+      {/* 관리자 대시보드 링크 */}
+      {isAdmin && (
+        <div className="bg-zinc-900 border-t border-zinc-800">
+          <div className="max-w-7xl mx-auto px-4 py-3">
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-xs text-zinc-500">관리자</span>
+              <Link 
+                href="/admin" 
+                className="text-sm text-blue-400 hover:text-blue-300 transition-colors font-medium"
+              >
+                대시보드 →
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 준비중 모달 */}
       {showModal && (

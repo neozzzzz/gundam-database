@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 interface AuthContextType {
   user: User | null
   loading: boolean
+  isAdmin: boolean
   signInWithGoogle: () => Promise<void>
   signOut: () => Promise<void>
 }
@@ -20,6 +21,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
+
+  // 관리자 여부 계산
+  const isAdmin = user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL
 
   useEffect(() => {
     // 초기 세션 확인
@@ -95,7 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   )
