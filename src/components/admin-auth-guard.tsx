@@ -19,38 +19,53 @@ export function AdminAuthGuard({ children }: AdminAuthGuardProps) {
       // 이미 리다이렉트 했으면 스킵
       if (hasRedirected.current) return
 
+      // 리다이렉트 루프 감지
+      const redirectCount = parseInt(sessionStorage.getItem('admin_redirect_count') || '0')
+      if (redirectCount > 2) {
+        console.error('Redirect loop detected, stopping')
+        sessionStorage.removeItem('admin_redirect_count')
+        setStatus('unauthorized')
+        return
+      }
+
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        // getUser()가 getSession()보다 더 안정적
+        const { data: { user }, error } = await supabase.auth.getUser()
         
         if (!isMounted) return
 
-        if (!session) {
+        if (error || !user) {
           if (!hasRedirected.current) {
             hasRedirected.current = true
             setStatus('unauthorized')
+            sessionStorage.setItem('admin_redirect_count', String(redirectCount + 1))
             window.location.replace('/admin/login')
           }
           return
         }
 
-        if (session.user.email !== process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
+        if (user.email !== process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
           if (!hasRedirected.current) {
             hasRedirected.current = true
             setStatus('unauthorized')
             try {
               await supabase.auth.signOut({ scope: 'local' })
             } catch (e) {}
+            sessionStorage.setItem('admin_redirect_count', String(redirectCount + 1))
             window.location.replace('/admin/login')
           }
           return
         }
 
+        // 인증 성공 - 카운터 리셋
+        sessionStorage.removeItem('admin_redirect_count')
         setStatus('authorized')
       } catch (error) {
         console.error('Auth check error:', error)
         if (isMounted && !hasRedirected.current) {
           hasRedirected.current = true
           setStatus('unauthorized')
+          sessionStorage.setItem('admin_redirect_count', String(redirectCount + 1))
           window.location.replace('/admin/login')
         }
       }

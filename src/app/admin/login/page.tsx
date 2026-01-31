@@ -14,12 +14,24 @@ export default function AdminLogin() {
     // 이미 로그인된 관리자인지 확인
     const checkExistingSession = async () => {
       if (hasRedirected.current) return
+
+      // 리다이렉트 루프 감지
+      const redirectCount = parseInt(sessionStorage.getItem('admin_redirect_count') || '0')
+      if (redirectCount > 2) {
+        console.error('Redirect loop detected, stopping')
+        sessionStorage.removeItem('admin_redirect_count')
+        setChecking(false)
+        return
+      }
       
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session?.user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
+        // getUser()가 getSession()보다 더 안정적
+        const { data: { user }, error } = await supabase.auth.getUser()
+        
+        if (!error && user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
           if (!hasRedirected.current) {
             hasRedirected.current = true
+            sessionStorage.setItem('admin_redirect_count', String(redirectCount + 1))
             window.location.replace('/admin')
             return
           }
@@ -27,6 +39,9 @@ export default function AdminLogin() {
       } catch (e) {
         console.error('Session check error:', e)
       }
+      
+      // 로그인 페이지에 정상 도착 - 카운터 리셋
+      sessionStorage.removeItem('admin_redirect_count')
       setChecking(false)
     }
     
