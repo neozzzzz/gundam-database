@@ -1,23 +1,14 @@
 'use client'
 
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 export default function AdminLogin() {
-  const router = useRouter()
   const supabase = createClientComponentClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    // 이미 로그인되어 있는지 확인
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
-        router.push('/admin')
-      }
-    })
-  }, [router, supabase])
+  // middleware에서 이미 로그인된 관리자는 /admin으로 리다이렉트됨
 
   const handleGoogleLogin = async () => {
     try {
