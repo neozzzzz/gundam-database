@@ -4,6 +4,10 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { ADMIN_PAGES, ADMIN_STYLES, PILOT_ROLES } from '@/lib/constants/admin-config'
+import { AdminPageHeader, AdminPagination, AdminLoading, AdminSearchFilter, AdminBadgeFilter } from '@/components/admin'
+
+const PAGE_CONFIG = ADMIN_PAGES.pilots
 
 export default function PilotsAdmin() {
   const router = useRouter()
@@ -16,10 +20,8 @@ export default function PilotsAdmin() {
   const [msCounts, setMsCounts] = useState<Record<string, number>>({})
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFaction, setSelectedFaction] = useState('')
-
-  // 페이지네이션
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage] = useState(20)
+  const [itemsPerPage] = useState(40)
   const [totalCount, setTotalCount] = useState(0)
 
   useEffect(() => {
@@ -41,81 +43,61 @@ export default function PilotsAdmin() {
   }
 
   const loadFactions = async () => {
-    const { data, error } = await supabase
-      .from('factions')
-      .select('*')
-      .order('sort_order')
-    
-    if (error) {
-      console.error('진영 로딩 오류:', error)
-    }
-    
+    const { data } = await supabase.from('factions').select('*').order('sort_order')
     const factionsList = data || []
     setFactions(factionsList)
-    
-    // ID를 키로 하는 맵 생성
     const map: Record<string, any> = {}
-    factionsList.forEach(f => {
-      map[f.id] = f
-    })
+    factionsList.forEach(f => { map[f.id] = f })
     setFactionsMap(map)
   }
 
   const loadPilots = async () => {
     try {
       setLoading(true)
-      
-      // 관계 조회 없이 pilots만 조회
-      let query = supabase
-        .from('pilots')
-        .select('*', { count: 'exact' })
-        .order('updated_at', { ascending: false })
+      let query = supabase.from('pilots').select('*', { count: 'exact' }).order('updated_at', { ascending: false })
 
-      // 검색 필터
       if (searchTerm) {
         query = query.or(`name_ko.ilike.%${searchTerm}%,name_en.ilike.%${searchTerm}%`)
       }
 
-      // 진영 필터 (affiliation_default_id 사용)
       if (selectedFaction) {
         const faction = factions.find(f => f.code === selectedFaction)
-        if (faction) {
-          query = query.eq('affiliation_default_id', faction.id)
-        }
+        if (faction) query = query.eq('affiliation_default_id', faction.id)
       }
 
-      // 페이지네이션
-      const from = (currentPage - 1) * itemsPerPage
-      const to = from + itemsPerPage - 1
-      query = query.range(from, to)
-
-      const { data, error, count } = await query
-
+      const { data: allData, error, count } = await query
       if (error) throw error
-      setPilots(data || [])
+
+      // 클라이언트 사이드 정렬: 수정된 항목 위로
+      const sortedData = (allData || []).sort((a, b) => {
+        const aUpdated = new Date(a.updated_at).getTime()
+        const aCreated = new Date(a.created_at).getTime()
+        const bUpdated = new Date(b.updated_at).getTime()
+        const bCreated = new Date(b.created_at).getTime()
+        
+        const aModified = Math.abs(aUpdated - aCreated) > 1000
+        const bModified = Math.abs(bUpdated - bCreated) > 1000
+        
+        if (aModified && !bModified) return -1
+        if (!aModified && bModified) return 1
+        if (aModified && bModified) return bUpdated - aUpdated
+        return bCreated - aCreated
+      })
+
+      const from = (currentPage - 1) * itemsPerPage
+      const to = from + itemsPerPage
+      setPilots(sortedData.slice(from, to))
       setTotalCount(count || 0)
 
-      // 탑승 기체 수 조회
-      if (data && data.length > 0) {
-        const pilotIds = data.map((p: any) => p.id)
-        const { data: msData } = await supabase
-          .from('mobile_suits')
-          .select('pilot_id')
-          .in('pilot_id', pilotIds)
-
-        // pilot_id별 count 계산
+      const pilotsPage = sortedData.slice(from, to)
+      if (pilotsPage.length > 0) {
+        const pilotIds = pilotsPage.map((p: any) => p.id)
+        const { data: msData } = await supabase.from('mobile_suits').select('pilot_id').in('pilot_id', pilotIds)
         const counts: Record<string, number> = {}
-        if (msData) {
-          msData.forEach((ms: any) => {
-            if (ms.pilot_id) {
-              counts[ms.pilot_id] = (counts[ms.pilot_id] || 0) + 1
-            }
-          })
-        }
+        msData?.forEach((ms: any) => { if (ms.pilot_id) counts[ms.pilot_id] = (counts[ms.pilot_id] || 0) + 1 })
         setMsCounts(counts)
       }
     } catch (error: any) {
-      console.error('파일럿 로딩 오류:', error)
       alert(`오류: ${error.message}`)
     } finally {
       setLoading(false)
@@ -123,194 +105,54 @@ export default function PilotsAdmin() {
   }
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`"${name}" 파일럿을 삭제하시겠습니까?`)) return
-
+    if (!confirm(`"${name}" ${PAGE_CONFIG.titleSingle}을(를) 삭제하시겠습니까?`)) return
     try {
-      const { error } = await supabase
-        .from('pilots')
-        .delete()
-        .eq('id', id)
-
+      const { error } = await supabase.from('pilots').delete().eq('id', id)
       if (error) throw error
-
       alert('삭제되었습니다!')
       loadPilots()
     } catch (error: any) {
-      console.error('삭제 오류:', error)
       alert(`삭제 실패: ${error.message}`)
     }
   }
 
-  // 진영 정보 가져오기
-  const getFaction = (affiliationId: string) => {
-    if (!affiliationId) return null
-    return factionsMap[affiliationId] || null
-  }
-
-  const getRoleLabel = (role: string) => {
-    const roles: any = {
-      'protagonist': '주인공',
-      'antagonist': '적대자',
-      'supporting': '조연',
-      'other': '기타',
-    }
-    return roles[role] || role || '-'
-  }
+  const getFaction = (affiliationId: string) => factionsMap[affiliationId] || null
+  const getRoleLabel = (role: string) => PILOT_ROLES.find(r => r.code === role)?.name || role || '-'
 
   const totalPages = Math.ceil(totalCount / itemsPerPage)
 
-  const getPageNumbers = () => {
-    const pages = []
-    const maxVisible = 5
-    if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i)
-    } else {
-      let start = Math.max(1, currentPage - Math.floor(maxVisible / 2))
-      let end = Math.min(totalPages, start + maxVisible - 1)
-      if (end - start < maxVisible - 1) start = Math.max(1, end - maxVisible + 1)
-      for (let i = start; i <= end; i++) pages.push(i)
-    }
-    return pages
-  }
-
   if (loading && pilots.length === 0) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-gray-900 font-medium">파일럿 목록을 불러오는 중...</p>
-        </div>
-      </div>
-    )
+    return <AdminLoading message={`${PAGE_CONFIG.titleSingle} 목록을 불러오는 중...`} spinnerColor={PAGE_CONFIG.color.primary} />
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link 
-                href="/admin"
-                className="text-gray-600 hover:text-gray-900"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </Link>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">👤 파일럿 관리</h1>
-                <p className="text-sm text-gray-600 mt-1">총 {totalCount}개</p>
-              </div>
-            </div>
-            <Link
-              href="/admin/pilots/new"
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              + 파일럿 추가
-            </Link>
-          </div>
-        </div>
-      </header>
+      <AdminPageHeader title={PAGE_CONFIG.title} icon={PAGE_CONFIG.icon} totalCount={totalCount} itemUnit={PAGE_CONFIG.itemUnit} addButtonLabel={`${PAGE_CONFIG.titleSingle} 추가`} addButtonHref={`${PAGE_CONFIG.basePath}/new`} color={PAGE_CONFIG.color} />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* 필터 */}
-        <div className="bg-white rounded-xl shadow p-6 mb-6">
+      <main className={ADMIN_STYLES.mainContainer}>
+        <div className={ADMIN_STYLES.filterCard}>
           <div className="space-y-4">
-            {/* 검색 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">검색</label>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value)
-                  setCurrentPage(1)
-                }}
-                placeholder="파일럿 이름 검색..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-gray-900  focus:ring-0 text-gray-900 bg-white"
-              />
-            </div>
-
-            {/* 진영 필터 - 뱃지 형태 */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <label className="block text-sm font-medium text-gray-700">진영 필터</label>
-                {selectedFaction && (
-                  <button
-                    onClick={() => {
-                      setSelectedFaction('')
-                      setCurrentPage(1)
-                    }}
-                    className="text-xs text-green-600 hover:text-green-800"
-                  >
-                    전체 해제
-                  </button>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {factions.length === 0 ? (
-                  <p className="text-sm text-gray-500">등록된 진영이 없습니다</p>
-                ) : (
-                  factions.map((faction) => {
-                    const isSelected = selectedFaction === faction.code
-                    return (
-                      <button
-                        key={faction.id}
-                        onClick={() => {
-                          setSelectedFaction(isSelected ? '' : faction.code)
-                          setCurrentPage(1)
-                        }}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                          isSelected
-                            ? 'text-white shadow-md'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                        style={isSelected ? { backgroundColor: faction.color || '#16A34A' } : {}}
-                      >
-                        {faction.name_ko}
-                      </button>
-                    )
-                  })
-                )}
-              </div>
-            </div>
+            <AdminSearchFilter searchTerm={searchTerm} onSearchChange={(v) => { setSearchTerm(v); setCurrentPage(1) }} placeholder={PAGE_CONFIG.searchPlaceholder} />
+            <AdminBadgeFilter label="진영 필터" options={factions.map(f => ({ code: f.code, name: f.name_ko, color: f.color }))} selected={selectedFaction} onSelect={(c) => { setSelectedFaction(selectedFaction === c ? '' : c); setCurrentPage(1) }} onClear={() => { setSelectedFaction(''); setCurrentPage(1) }} accentColor={PAGE_CONFIG.color.primary} />
           </div>
         </div>
 
-        {/* 파일럿 테이블 */}
-        <div className="bg-white rounded-xl shadow overflow-hidden">
+        <div className={ADMIN_STYLES.tableCard}>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    이름
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    코드
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    소속 진영
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    역할
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    탑승 기체
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    작업
-                  </th>
+                  <th className={ADMIN_STYLES.tableHeader}>이름</th>
+                  <th className={ADMIN_STYLES.tableHeader}>코드</th>
+                  <th className={ADMIN_STYLES.tableHeader}>소속 진영</th>
+                  <th className={ADMIN_STYLES.tableHeader}>역할</th>
+                  <th className={ADMIN_STYLES.tableHeader}>탑승 기체</th>
+                  <th className={`${ADMIN_STYLES.tableHeader} text-right`}>작업</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {pilots.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                      {searchTerm || selectedFaction ? '검색 결과가 없습니다.' : '등록된 파일럿이 없습니다.'}
-                    </td>
-                  </tr>
+                  <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-500">{searchTerm || selectedFaction ? '검색 결과가 없습니다.' : `등록된 ${PAGE_CONFIG.titleSingle}이(가) 없습니다.`}</td></tr>
                 ) : (
                   pilots.map((pilot) => {
                     const faction = getFaction(pilot.affiliation_default_id)
@@ -318,55 +160,22 @@ export default function PilotsAdmin() {
                       <tr key={pilot.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4">
                           <div className="font-medium text-gray-900">{pilot.name_ko}</div>
-                          {pilot.name_en && (
-                            <div className="text-sm text-gray-500">{pilot.name_en}</div>
-                          )}
+                          {pilot.name_en && <div className="text-sm text-gray-500">{pilot.name_en}</div>}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {pilot.code ? (
-                            <span className="font-mono text-sm text-gray-900 bg-gray-100 px-2 py-1 rounded">
-                              {pilot.code}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
+                        <td className={ADMIN_STYLES.tableCell}>
+                          {pilot.code ? <span className={ADMIN_STYLES.codeBadge}>{pilot.code}</span> : <span className="text-gray-400">-</span>}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {faction ? (
-                            <span 
-                              className="px-2 py-1 rounded text-xs font-medium text-white"
-                              style={{ backgroundColor: faction.color || '#6B7280' }}
-                            >
-                              {faction.name_ko}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
+                        <td className={ADMIN_STYLES.tableCell}>
+                          {faction ? <span className="px-2 py-1 rounded text-xs font-medium text-white" style={{ backgroundColor: faction.color || '#6B7280' }}>{faction.name_ko}</span> : <span className="text-gray-400">-</span>}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm text-gray-700">
-                            {getRoleLabel(pilot.role)}
-                          </span>
+                        <td className={`${ADMIN_STYLES.tableCell} text-sm text-gray-700`}>{getRoleLabel(pilot.role)}</td>
+                        <td className={ADMIN_STYLES.tableCell}>
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${PAGE_CONFIG.color.badge}`}>{msCounts[pilot.id] || 0}기</span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-800">
-                            {msCounts[pilot.id] || 0}기
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                        <td className={`${ADMIN_STYLES.tableCell} text-right text-sm`}>
                           <div className="flex items-center justify-end gap-2">
-                            <Link
-                              href={`/admin/pilots/${pilot.id}/edit`}
-                              className="text-green-600 hover:text-green-800 font-medium"
-                            >
-                              수정
-                            </Link>
-                            <button
-                              onClick={() => handleDelete(pilot.id, pilot.name_ko)}
-                              className="text-red-600 hover:text-red-800 font-medium"
-                            >
-                              삭제
-                            </button>
+                            <Link href={`${PAGE_CONFIG.basePath}/${pilot.id}/edit`} className={`${PAGE_CONFIG.color.text} ${PAGE_CONFIG.color.textHover} font-medium`}>수정</Link>
+                            <button onClick={() => handleDelete(pilot.id, pilot.name_ko)} className="text-red-600 hover:text-red-800 font-medium">삭제</button>
                           </div>
                         </td>
                       </tr>
@@ -376,55 +185,7 @@ export default function PilotsAdmin() {
               </tbody>
             </table>
           </div>
-
-          {/* 페이지네이션 */}
-          {totalPages > 1 && (
-            <div className="px-6 py-4 border-t border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-700">
-                  <span className="font-medium">{totalCount}</span>개 중{' '}
-                  <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span>
-                  {' '}-{' '}
-                  <span className="font-medium">
-                    {Math.min(currentPage * itemsPerPage, totalCount)}
-                  </span>
-                  개 표시
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
-                    className="px-3 py-1 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    이전
-                  </button>
-
-                  {getPageNumbers().map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`px-3 py-1 rounded-lg text-sm font-medium ${
-                        currentPage === page
-                          ? 'bg-green-600 text-white'
-                          : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
-
-                  <button
-                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                    disabled={currentPage === totalPages}
-                    className="px-3 py-1 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    다음
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          <AdminPagination currentPage={currentPage} totalPages={totalPages} totalCount={totalCount} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} accentColor={PAGE_CONFIG.color.primary} />
         </div>
       </main>
     </div>
