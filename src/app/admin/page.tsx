@@ -4,6 +4,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { AdminAuthGuard } from '@/components/admin-auth-guard'
+import { ADMIN_COLORS } from '@/lib/constants/admin-colors'
 
 function AdminDashboardContent() {
   const supabase = createClientComponentClient()
@@ -116,13 +117,85 @@ function AdminDashboardContent() {
     }
   }
 
+  // 통계 카드 설정
+  const statCards = [
+    { 
+      title: '전체 킷', 
+      count: stats.totalKits, 
+      icon: '/icons/admin/box.svg',
+      colorClass: ADMIN_COLORS.kits.stat,
+      subText: `실제: ${stats.realKits} / 샘플: ${stats.sampleKits}`
+    },
+    { 
+      title: '시리즈', 
+      count: stats.totalSeries, 
+      icon: '/icons/admin/tv.svg',
+      colorClass: ADMIN_COLORS.series.stat 
+    },
+    { 
+      title: '모빌슈트', 
+      count: stats.totalMobileSuits, 
+      icon: '/icons/admin/robot.svg',
+      colorClass: ADMIN_COLORS.mobileSuits.stat 
+    },
+    { 
+      title: '파일럿', 
+      count: stats.totalPilots, 
+      icon: '/icons/admin/user.svg',
+      colorClass: ADMIN_COLORS.pilots.stat 
+    },
+    { 
+      title: '진영', 
+      count: stats.totalFactions, 
+      icon: '/icons/admin/flag.svg',
+      colorClass: ADMIN_COLORS.factions.stat 
+    },
+    { 
+      title: '제조사', 
+      count: stats.totalCompanies, 
+      icon: '/icons/admin/factory.svg',
+      colorClass: ADMIN_COLORS.companies.stat 
+    },
+  ]
+
+  // 메뉴 아이템 설정
   const menuItems = [
-    { title: '킷 관리', href: '/admin/kits', count: stats.totalKits, icon: '📦', color: 'blue' },
-    { title: '시리즈 관리', href: '/admin/series', count: stats.totalSeries, icon: '📺', color: 'purple' },
-    { title: '모빌슈트 관리', href: '/admin/mobile-suits', count: stats.totalMobileSuits, icon: '🤖', color: 'green' },
-    { title: '파일럿 관리', href: '/admin/pilots', count: stats.totalPilots, icon: '👤', color: 'yellow' },
-    { title: '진영 관리', href: '/admin/factions', count: stats.totalFactions, icon: '🏴', color: 'red' },
-    { title: '제조사 관리', href: '/admin/companies', count: stats.totalCompanies, icon: '🏭', color: 'indigo' },
+    { 
+      title: '킷 관리', 
+      href: '/admin/kits', 
+      count: stats.totalKits, 
+      icon: '/icons/admin/box.svg',
+    },
+    { 
+      title: '시리즈 관리', 
+      href: '/admin/series', 
+      count: stats.totalSeries, 
+      icon: '/icons/admin/tv.svg',
+    },
+    { 
+      title: '모빌슈트 관리', 
+      href: '/admin/mobile-suits', 
+      count: stats.totalMobileSuits, 
+      icon: '/icons/admin/robot.svg',
+    },
+    { 
+      title: '파일럿 관리', 
+      href: '/admin/pilots', 
+      count: stats.totalPilots, 
+      icon: '/icons/admin/user.svg',
+    },
+    { 
+      title: '진영 관리', 
+      href: '/admin/factions', 
+      count: stats.totalFactions, 
+      icon: '/icons/admin/flag.svg',
+    },
+    { 
+      title: '제조사 관리', 
+      href: '/admin/companies', 
+      count: stats.totalCompanies, 
+      icon: '/icons/admin/factory.svg',
+    },
   ]
 
   return (
@@ -142,6 +215,8 @@ function AdminDashboardContent() {
             <div className="flex items-center gap-4">
               <Link
                 href="/"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
               >
                 사이트 보기
@@ -159,26 +234,23 @@ function AdminDashboardContent() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* 통계 카드 */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow p-6">
-            <div className="text-sm font-medium text-gray-500">전체 킷</div>
-            <div className="mt-2 text-3xl font-bold text-gray-900">{stats.totalKits}</div>
-            <div className="mt-1 text-sm text-gray-500">
-              실제: {stats.realKits} / 샘플: {stats.sampleKits}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+          {statCards.map((card) => (
+            <div key={card.title} className="bg-white rounded-xl shadow p-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
+                <img src={card.icon} alt={card.title} className="w-5 h-5" />
+                <span>{card.title}</span>
+              </div>
+              <div className={`mt-2 text-2xl font-bold ${card.colorClass}`}>
+                {card.count}
+              </div>
+              {card.subText && (
+                <div className="mt-1 text-xs text-gray-500">
+                  {card.subText}
+                </div>
+              )}
             </div>
-          </div>
-          <div className="bg-white rounded-xl shadow p-6">
-            <div className="text-sm font-medium text-gray-500">시리즈</div>
-            <div className="mt-2 text-3xl font-bold text-purple-600">{stats.totalSeries}</div>
-          </div>
-          <div className="bg-white rounded-xl shadow p-6">
-            <div className="text-sm font-medium text-gray-500">모빌슈트</div>
-            <div className="mt-2 text-3xl font-bold text-green-600">{stats.totalMobileSuits}</div>
-          </div>
-          <div className="bg-white rounded-xl shadow p-6">
-            <div className="text-sm font-medium text-gray-500">파일럿</div>
-            <div className="mt-2 text-3xl font-bold text-yellow-600">{stats.totalPilots}</div>
-          </div>
+          ))}
         </div>
 
         {/* 메뉴 그리드 */}
@@ -190,10 +262,12 @@ function AdminDashboardContent() {
               className="bg-white rounded-xl shadow p-6 hover:shadow-lg transition-shadow"
             >
               <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl mb-2">{item.icon}</div>
-                  <h3 className="text-lg font-semibold text-gray-900">{item.title}</h3>
-                  <p className="text-sm text-gray-500 mt-1">{item.count}개 등록됨</p>
+                <div className="flex items-center gap-4">
+                  <img src={item.icon} alt={item.title} className="w-8 h-8" />
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">{item.title}</h3>
+                    <p className="text-sm text-gray-500"><span className="font-bold">{item.count}</span>개 등록됨</p>
+                  </div>
                 </div>
                 <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
