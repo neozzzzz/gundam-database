@@ -1,13 +1,13 @@
 'use client'
 
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { AdminAuthGuard } from '@/components/admin-auth-guard'
 import { ADMIN_COLORS } from '@/lib/constants/admin-colors'
 
 function AdminDashboardContent() {
-  const supabase = createClientComponentClient()
+  const supabase = createClient()
   const [user, setUser] = useState<any>(null)
   const [stats, setStats] = useState({
     totalKits: 0,

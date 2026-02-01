@@ -1,10 +1,10 @@
 'use client'
 
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState, useRef } from 'react'
 
 export default function AdminLogin() {
-  const supabase = createClientComponentClient()
+  const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [checking, setChecking] = useState(true)
   const [error, setError] = useState<string | null>(null)

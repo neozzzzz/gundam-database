@@ -1,6 +1,6 @@
 'use client'
 
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState, useRef } from 'react'
 
 interface AdminAuthGuardProps {
@@ -9,7 +9,7 @@ interface AdminAuthGuardProps {
 
 export function AdminAuthGuard({ children }: AdminAuthGuardProps) {
   const [status, setStatus] = useState<'loading' | 'authorized' | 'unauthorized'>('loading')
-  const supabase = createClientComponentClient()
+  const supabase = createClient()
   const hasRedirected = useRef(false)
 
   useEffect(() => {

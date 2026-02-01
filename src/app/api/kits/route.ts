@@ -7,7 +7,7 @@ import type { KitFilters, PaginatedResponse, KitListItem } from '@/lib/types'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
     const searchParams = request.nextUrl.searchParams
 
     // 필터 파라미터 추출

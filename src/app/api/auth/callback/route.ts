@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get('code')
 
   if (code) {
-    const supabase = createClient()
+    const supabase = await createClient()
     
     // OAuth 코드를 세션으로 교환
     await supabase.auth.exchangeCodeForSession(code)

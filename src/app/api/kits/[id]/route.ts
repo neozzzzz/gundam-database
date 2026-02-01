@@ -4,16 +4,17 @@ import { NextResponse } from 'next/server'
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
+    const { id } = await params
     
     // Step 1: 먼저 킷만 가져오기 (JOIN 없이)
     const { data: kitOnly, error: kitError } = await supabase
       .from('gundam_kits')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (kitError) {
@@ -128,11 +129,11 @@ export async function GET(
     }
 
     // Step 7: kit_images 가져오기
-    let imagesData = []
+    let imagesData: any[] = []
     const { data: images } = await supabase
       .from('kit_images')
       .select('*')
-      .eq('kit_id', params.id)
+      .eq('kit_id', id)
       .order('is_primary', { ascending: false })
     
     if (images) {
@@ -144,7 +145,7 @@ export async function GET(
     const { data: relations } = await supabase
       .from('kit_relations')
       .select('related_kit_id, relation_type')
-      .eq('kit_id', params.id)
+      .eq('kit_id', id)
     
     if (relations && relations.length > 0) {
       const relatedKitIds = relations.map(r => r.related_kit_id)

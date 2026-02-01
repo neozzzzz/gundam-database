@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function GET() {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
 
     // 모든 필터 옵션 병렬 조회
     const [

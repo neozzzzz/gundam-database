@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/lib/supabase/client'
 
 interface ImageUploadProps {
   value: string                          // 현재 이미지 URL
@@ -31,7 +31,7 @@ export default function ImageUpload({
   placeholder = '이미지를 드래그하거나 클릭하세요',
   className = '',
 }: ImageUploadProps) {
-  const supabase = createClientComponentClient()
+  const supabase = createClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   const [isDragging, setIsDragging] = useState(false)

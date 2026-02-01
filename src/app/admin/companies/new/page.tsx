@@ -1,6 +1,6 @@
 'use client'
 
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { ADMIN_PAGES, ADMIN_STYLES, UNIVERSES, COMPANY_TYPES } from '@/lib/constants/admin-config'
@@ -10,7 +10,7 @@ const PAGE_CONFIG = ADMIN_PAGES.companies
 
 export default function AddCompany() {
   const router = useRouter()
-  const supabase = createClientComponentClient()
+  const supabase = createClient()
   const [saving, setSaving] = useState(false)
   
   const [formData, setFormData] = useState({

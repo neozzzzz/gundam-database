@@ -1,6 +1,6 @@
 'use client'
 
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/lib/supabase/client'
 import { useRouter, usePathname } from 'next/navigation'
 import { useEffect, useState, useRef } from 'react'
 
@@ -11,7 +11,7 @@ export default function AdminLayout({
 }) {
   const router = useRouter()
   const pathname = usePathname()
-  const supabase = createClientComponentClient()
+  const supabase = createClient()
   const [isAuthorized, setIsAuthorized] = useState(false)
   const [isChecking, setIsChecking] = useState(true)
   const hasChecked = useRef(false)

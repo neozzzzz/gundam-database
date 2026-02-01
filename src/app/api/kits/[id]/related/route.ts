@@ -6,11 +6,11 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createClient()
-    const { id } = params
+    const supabase = await createClient()
+    const { id } = await params
 
     // 킷의 관계 정보 조회
     const { data: relations, error: relationsError } = await supabase

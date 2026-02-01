@@ -1,6 +1,6 @@
 'use client'
 
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -11,7 +11,7 @@ const PAGE_CONFIG = ADMIN_PAGES.pilots
 
 export default function PilotsAdmin() {
   const router = useRouter()
-  const supabase = createClientComponentClient()
+  const supabase = createClient()
   
   const [loading, setLoading] = useState(true)
   const [pilots, setPilots] = useState<any[]>([])

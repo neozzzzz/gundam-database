@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function GET() {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
 
     // 건담 킷 수
     const { count: kitsCount, error: kitsError } = await supabase

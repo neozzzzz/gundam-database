@@ -6,11 +6,11 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createClient()
-    const { id } = params
+    const supabase = await createClient()
+    const { id } = await params
 
     // 사용자 인증 확인
     const {

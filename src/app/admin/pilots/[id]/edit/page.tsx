@@ -1,6 +1,6 @@
 'use client'
 
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/lib/supabase/client'
 import { useRouter, useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import ImageUpload from '@/components/image-upload'
@@ -22,7 +22,7 @@ export default function EditPilot() {
   const router = useRouter()
   const params = useParams()
   const pilotId = params?.id as string
-  const supabase = createClientComponentClient()
+  const supabase = createClient()
   
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)

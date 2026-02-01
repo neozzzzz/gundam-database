@@ -8,7 +8,7 @@ import type { SuggestionCreate } from '@/lib/types'
 // 제안 목록 조회
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
     const searchParams = request.nextUrl.searchParams
 
     // 사용자 인증 확인
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
 // 새 제안 생성
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
 
     // 사용자 인증 확인
     const {
