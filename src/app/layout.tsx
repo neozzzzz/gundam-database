@@ -6,12 +6,14 @@ import { Inter } from 'next/font/google'
 import { Providers } from '@/components/providers'
 import './globals.css'
 import { Analytics } from "@vercel/analytics/react"
+import GoogleAnalytics from '@/components/GoogleAnalytics'
+
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'GUNDAM ARCHIVE - 건담 모델 데이터베이스',
-  description: '반다이 건담 모델 정보를 한눈에',
+  title: 'GUNDAM ARCHIVE - 건담 아카이브',
+  description: '건담 모델 정보를 한눈에',
   icons: {
     icon: '/icon.png',
     apple: '/icon.png',
@@ -30,6 +32,7 @@ export default function RootLayout({
           {children}
         </Providers>
         <Analytics />
+        <GoogleAnalytics />
       </body>
     </html>
   )
