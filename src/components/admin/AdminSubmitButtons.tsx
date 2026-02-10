@@ -11,8 +11,8 @@ interface AdminSubmitButtonsProps {
   submitText?: string
   cancelHref: string
   cancelText?: string
-  accentColor?: string  // tailwind class 예: 'bg-green-600'
-  accentHoverColor?: string  // tailwind class 예: 'hover:bg-green-700'
+  accentColor?: string  // hex color 예: '#10B981'
+  accentHoverColor?: string  // 사용 안 함 (hover는 opacity로 처리)
 }
 
 export function AdminSubmitButtons({
@@ -21,15 +21,15 @@ export function AdminSubmitButtons({
   submitText = '저장',
   cancelHref,
   cancelText = '취소',
-  accentColor = 'bg-gray-900',
-  accentHoverColor = 'hover:bg-gray-800',
+  accentColor = '#1f2937', // gray-900
 }: AdminSubmitButtonsProps) {
   return (
     <div className="flex gap-4">
       <button
         type="submit"
         disabled={saving}
-        className={`flex-1 px-6 py-3 ${accentColor} text-white font-medium rounded-lg ${accentHoverColor} disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
+        className="flex-1 px-6 py-3 text-white font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors hover:opacity-90"
+        style={{ backgroundColor: accentColor }}
       >
         {saving ? savingText : submitText}
       </button>

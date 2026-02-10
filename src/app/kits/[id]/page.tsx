@@ -196,31 +196,24 @@ export default function KitDetailPage() {
               )}
             </div>
 
-            {/* 기본 정보 */}
-            <div className="card-threads space-y-3">
-              {kit.release_date && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">출시일</span>
-                  <span className="font-medium">
-                    {new Date(kit.release_date).toLocaleDateString('ko-KR')}
-                  </span>
-                </div>
-              )}
+            {/* 제품 코드 정보 */}
+            {(kit.bandai_product_code || kit.jan_code) && (
+              <div className="card-threads space-y-3">
+                {kit.bandai_product_code && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">제품 코드</span>
+                    <span className="font-medium">{kit.bandai_product_code}</span>
+                  </div>
+                )}
 
-              {kit.bandai_product_code && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">제품 코드</span>
-                  <span className="font-medium">{kit.bandai_product_code}</span>
-                </div>
-              )}
-
-              {kit.jan_code && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">JAN 코드</span>
-                  <span className="font-mono text-sm font-medium">{kit.jan_code}</span>
-                </div>
-              )}
-            </div>
+                {kit.jan_code && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">JAN 코드</span>
+                    <span className="font-mono text-sm font-medium">{kit.jan_code}</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* 모빌슈트 상세 정보 */}
             {mobileSuit && (
@@ -372,24 +365,6 @@ export default function KitDetailPage() {
               </div>
             )}
 
-            {/* 가격 */}
-            <div className="card-threads bg-primary/5 border-primary/20">
-              <div className="flex items-center justify-between">
-                <span className="text-lg">가격</span>
-                <span className="text-3xl font-bold text-primary">
-                  {kit.price_krw 
-                    ? `₩${kit.price_krw.toLocaleString()}` 
-                    : '가격 미정'
-                  }
-                </span>
-              </div>
-              {kit.msrp_price && (
-                <div className="text-sm text-muted-foreground mt-2">
-                  일본 가격: ¥{kit.msrp_price.toLocaleString()}
-                </div>
-              )}
-            </div>
-
             {/* 설명 */}
             {kit.description && (
               <div className="card-threads">
@@ -399,6 +374,43 @@ export default function KitDetailPage() {
                 </p>
               </div>
             )}
+
+            {/* 출시일 & 가격 */}
+            <div className="card-threads bg-primary/5 border-primary/20">
+              <div className="space-y-4">
+                {/* 출시일 */}
+                {kit.release_date && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">출시일</span>
+                    <span className="font-medium text-lg">
+                      {new Date(kit.release_date).toLocaleDateString('ko-KR', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </span>
+                  </div>
+                )}
+                
+                {/* 가격 */}
+                <div className={`flex items-center justify-between ${kit.release_date ? 'pt-3 border-t border-primary/10' : ''}`}>
+                  <span className="text-lg font-medium">가격</span>
+                  <div className="text-right">
+                    <span className="text-3xl font-bold text-primary">
+                      {kit.price_krw 
+                        ? `₩${kit.price_krw.toLocaleString()}` 
+                        : '가격 미정'
+                      }
+                    </span>
+                    {kit.price_jpy && (
+                      <div className="text-sm text-muted-foreground mt-1">
+                        ¥{kit.price_jpy.toLocaleString()} (税込)
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {/* 구매 링크 */}
             {kit.purchase_links && kit.purchase_links.length > 0 && (
@@ -430,10 +442,10 @@ export default function KitDetailPage() {
                     <a
                       key={relatedKit.id}
                       href={`/kits/${relatedKit.id}`}
-                      className="group block bg-secondary rounded-xl overflow-hidden hover:bg-accent transition-colors"
+                      className="group block card-threads p-0 overflow-hidden"
                     >
                       {/* 이미지 */}
-                      <div className="aspect-square bg-background/50 relative overflow-hidden">
+                      <div className="aspect-square bg-secondary relative overflow-hidden">
                         {relatedKit.box_art_url ? (
                           <img
                             src={relatedKit.box_art_url}
@@ -441,17 +453,17 @@ export default function KitDetailPage() {
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center">
+                          <div className="w-full h-full flex items-center justify-center bg-secondary">
                             <img 
                               src="/no-image.png" 
                               alt="이미지 없음"
-                              className="w-1/3 h-1/3 object-contain invert opacity-30"
+                              className="w-2/5 h-2/5 object-contain invert opacity-30"
                             />
                           </div>
                         )}
                         {/* 관계 유형 뱃지 */}
                         {relatedKit.relation_type && (
-                          <span className="absolute top-2 left-2 px-2 py-0.5 bg-black/70 text-white text-xs rounded-full">
+                          <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400">
                             {relatedKit.relation_type === 'same_mobile_suit' && '같은 MS'}
                             {relatedKit.relation_type === 'same_series' && '같은 시리즈'}
                             {relatedKit.relation_type === 'variant' && '바리에이션'}

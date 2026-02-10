@@ -6,6 +6,7 @@ export { AdminPageHeader } from './AdminPageHeader'
 export { AdminFormHeader } from './AdminFormHeader'
 export { AdminLoading } from './AdminLoading'
 export { AdminPagination } from './AdminPagination'
+export { AdminModal } from './AdminModal'
 
 // 필터 컴포넌트
 export { AdminSearchFilter } from './AdminSearchFilter'

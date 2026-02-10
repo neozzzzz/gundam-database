@@ -13,8 +13,9 @@ export default function AddFaction() {
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
   
+  // V1.10: code가 곧 id (예: 'EFSF', 'ZEON')
   const [formData, setFormData] = useState({
-    code: '',
+    id: '',           // V1.10: code → id로 변경
     name_ko: '',
     name_en: '',
     universe: '',
@@ -36,23 +37,23 @@ export default function AddFaction() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.code.trim() || !formData.name_ko.trim()) {
-      alert('코드와 이름(한글)은 필수입니다.')
+    
+    // V1.10: id(코드)와 이름 필수 검증
+    if (!formData.id.trim() || !formData.name_ko.trim()) {
+      alert('ID(코드)와 이름(한글)은 필수입니다.')
       return
     }
 
     try {
       setSaving(true)
       const { error } = await supabase.from('factions').insert([{
-        code: formData.code.trim().toUpperCase(),
+        id: formData.id.trim().toUpperCase(),  // V1.10: id 직접 입력
         name_ko: formData.name_ko.trim(),
         name_en: formData.name_en?.trim() || null,
         universe: formData.universe || null,
         color: formData.color || null,
         description: formData.description?.trim() || null,
         sort_order: parseInt(formData.sort_order) || 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
       }]).select()
 
       if (error) throw error
@@ -78,13 +79,23 @@ export default function AddFaction() {
           
           <AdminFormSection title="기본 정보">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <AdminTextField label="이름 (한글)" name="name_ko" value={formData.name_ko} onChange={handleChange} required placeholder="지구연방군" />
-              <AdminTextField label="이름 (영문)" name="name_en" value={formData.name_en} onChange={handleChange} placeholder="Earth Federation Space Force" />
+              {/* V1.10: ID 필드 (필수, 대문자) */}
               <div>
-                <label className={ADMIN_STYLES.label}>코드 <span className="text-red-500">*</span></label>
-                <input type="text" name="code" value={formData.code} onChange={handleChange} placeholder="EFSF" className={`${ADMIN_STYLES.input} font-mono uppercase`} required />
+                <label className={ADMIN_STYLES.label}>ID (코드) <span className="text-red-500">*</span></label>
+                <input 
+                  type="text" 
+                  name="id" 
+                  value={formData.id} 
+                  onChange={handleChange} 
+                  placeholder="EFSF" 
+                  className={`${ADMIN_STYLES.input} font-mono uppercase`} 
+                  required 
+                />
+                <p className="text-xs text-gray-500 mt-1">고유 식별자 (대문자, 하이픈 가능)</p>
               </div>
               <AdminTextField label="정렬 순서" name="sort_order" value={formData.sort_order} onChange={handleChange} type="number" />
+              <AdminTextField label="이름 (한글)" name="name_ko" value={formData.name_ko} onChange={handleChange} required placeholder="지구연방군" />
+              <AdminTextField label="이름 (영문)" name="name_en" value={formData.name_en} onChange={handleChange} placeholder="Earth Federation Space Force" />
             </div>
           </AdminFormSection>
 

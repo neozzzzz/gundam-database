@@ -17,8 +17,9 @@ export default function AddPilot() {
   const [dataLoading, setDataLoading] = useState(true)
   const [factions, setFactions] = useState<any[]>([])
   
+  // V1.10: id 직접 입력 (예: 'AMURO-RAY', 'CHAR-AZNABLE')
   const [formData, setFormData] = useState({
-    code: '',
+    id: '',               // V1.10: code가 곧 id
     name_ko: '',
     name_en: '',
     name_ja: '',
@@ -61,15 +62,17 @@ export default function AddPilot() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.name_ko.trim()) {
-      alert(`${PAGE_CONFIG.titleSingle} 이름(한글)은 필수입니다.`)
+    
+    // V1.10: id와 이름 필수 검증
+    if (!formData.id.trim() || !formData.name_ko.trim()) {
+      alert('ID(코드)와 파일럿 이름(한글)은 필수입니다.')
       return
     }
 
     try {
       setSaving(true)
       const { error } = await supabase.from('pilots').insert([{
-        code: formData.code?.trim().toUpperCase() || null,
+        id: formData.id.trim().toUpperCase(),  // V1.10: id 직접 입력
         name_ko: formData.name_ko.trim(),
         name_en: formData.name_en?.trim() || null,
         name_ja: formData.name_ja?.trim() || null,
@@ -84,8 +87,6 @@ export default function AddPilot() {
         height: formData.height ? parseFloat(formData.height) : null,
         weight: formData.weight ? parseFloat(formData.weight) : null,
         image_url: formData.image_url || null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
       }]).select()
 
       if (error) throw error
@@ -119,23 +120,45 @@ export default function AddPilot() {
             </div>
           </AdminFormSection>
 
+          <AdminFormSection title="식별 정보">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* V1.10: ID 필드 (필수) */}
+              <div>
+                <label className={ADMIN_STYLES.label}>ID (코드) <span className="text-red-500">*</span></label>
+                <input 
+                  type="text" 
+                  name="id" 
+                  value={formData.id} 
+                  onChange={handleChange} 
+                  placeholder="AMURO-RAY" 
+                  className={`${ADMIN_STYLES.input} font-mono uppercase`} 
+                  required 
+                />
+                <p className="text-xs text-gray-500 mt-1">고유 식별자 (예: AMURO-RAY, CHAR-AZNABLE)</p>
+              </div>
+              <AdminTextField label="계급" name="rank" value={formData.rank} onChange={handleChange} />
+            </div>
+          </AdminFormSection>
+
           <AdminFormSection title="기본 정보">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <AdminTextField label="이름 (한글)" name="name_ko" value={formData.name_ko} onChange={handleChange} required />
               <AdminTextField label="이름 (영문)" name="name_en" value={formData.name_en} onChange={handleChange} />
               <AdminTextField label="이름 (일본어)" name="name_ja" value={formData.name_ja} onChange={handleChange} />
-              <div>
-                <label className={ADMIN_STYLES.label}>코드</label>
-                <input type="text" name="code" value={formData.code} onChange={handleChange} placeholder="AMURO" className={`${ADMIN_STYLES.input} font-mono uppercase`} />
-              </div>
-              <AdminTextField label="계급" name="rank" value={formData.rank} onChange={handleChange} />
               <AdminTextField label="국적" name="nationality" value={formData.nationality} onChange={handleChange} />
             </div>
           </AdminFormSection>
 
           <AdminFormSection title="소속 & 역할">
             <div className="space-y-6">
-              <AdminSelectButtons label="소속 진영" options={factions.map(f => ({ value: f.id, label: f.name_ko, color: f.color }))} value={formData.affiliation_default_id} onChange={(v) => setFormData({ ...formData, affiliation_default_id: v })} scrollable emptyLabel="선택 안 함" />
+              <AdminSelectButtons 
+                label="소속 진영" 
+                options={factions.map(f => ({ value: f.id, label: `${f.name_ko} (${f.id})`, color: f.color }))} 
+                value={formData.affiliation_default_id} 
+                onChange={(v) => setFormData({ ...formData, affiliation_default_id: v })} 
+                scrollable 
+                emptyLabel="선택 안 함" 
+              />
               <AdminSelectButtons label="역할" options={PILOT_ROLES.map(r => ({ value: r.code, label: r.name }))} value={formData.role} onChange={(v) => setFormData({ ...formData, role: v })} accentColor={PAGE_CONFIG.color.bgSolid} />
             </div>
           </AdminFormSection>
@@ -153,6 +176,14 @@ export default function AddPilot() {
           <AdminFormSection title="소개">
             <AdminTextarea label="" name="bio" value={formData.bio} onChange={handleChange} rows={4} />
           </AdminFormSection>
+
+          {/* ID 예시 안내 */}
+          <div className="mt-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+            <p className="text-sm text-orange-800">
+              <strong>ID 예시:</strong><br />
+              AMURO-RAY, CHAR-AZNABLE, KIRA-YAMATO, SETSUNA-F-SEIEI
+            </p>
+          </div>
 
           <AdminSubmitButtons saving={saving} submitText={`${PAGE_CONFIG.titleSingle} 추가`} cancelHref={PAGE_CONFIG.basePath} accentColor={PAGE_CONFIG.color.bgSolid} accentHoverColor={PAGE_CONFIG.color.bgSolidHover} />
         </form>

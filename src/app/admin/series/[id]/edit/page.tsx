@@ -11,7 +11,8 @@ const PAGE_CONFIG = ADMIN_PAGES.series
 export default function EditSeries() {
   const router = useRouter()
   const params = useParams()
-  const seriesId = params?.id as string
+  // URL에서 받은 ID를 디코딩 (한글 ID 지원)
+  const seriesId = params?.id ? decodeURIComponent(params.id as string) : ''
   const supabase = createClient()
   
   const [loading, setLoading] = useState(true)
@@ -76,7 +77,7 @@ export default function EditSeries() {
         name_ja: formData.name_ja?.trim() || null,
         description: formData.description?.trim() || null,
         updated_at: new Date().toISOString(),
-      }).eq('id', seriesId).select()
+      }).eq('id', seriesId)
 
       if (error) throw error
       alert(`${PAGE_CONFIG.titleSingle}가 성공적으로 수정되었습니다!`)
@@ -111,7 +112,7 @@ export default function EditSeries() {
             </div>
           </AdminFormSection>
 
-          <AdminSubmitButtons saving={saving} submitText="수정 완료" cancelHref={PAGE_CONFIG.basePath} accentColor={PAGE_CONFIG.color.bgSolid} accentHoverColor={PAGE_CONFIG.color.bgSolidHover} />
+          <AdminSubmitButtons saving={saving} submitText="수정 완료" cancelHref={PAGE_CONFIG.basePath} accentColor={PAGE_CONFIG.color.bgSolid} />
         </form>
       </main>
     </div>

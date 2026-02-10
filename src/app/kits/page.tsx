@@ -171,11 +171,27 @@ export default function KitsPage() {
                     ))}
                   </div>
 
-                  {/* 빈 상태 */}
+                  {/* 빈 상태 - 검색 결과 없음 */}
                   {kits.length === 0 && !loading && (
                     <div className="text-center py-20">
-                      <div className="text-6xl mb-4">🔍</div>
-                      <p className="text-xl font-bold mb-2">
+                      {/* 모노톤 돋보기 아이콘 */}
+                      <div className="flex justify-center mb-6">
+                        <svg 
+                          className="w-24 h-24 text-muted-foreground opacity-40"
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24" 
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                            strokeWidth={1.5} 
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+                          />
+                        </svg>
+                      </div>
+                      <p className="text-xl font-bold mb-2 text-foreground">
                         검색 결과가 없습니다
                       </p>
                       <p className="text-muted-foreground">

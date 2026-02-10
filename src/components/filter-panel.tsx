@@ -1,19 +1,50 @@
 // src/components/filter-panel.tsx
 // 필터 패널 컴포넌트
+// V1.9.3: 등급/스케일 분리, 년도 표기 삭제, 커스텀 스크롤바 적용
 
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import type { Grade, Series, Timeline } from '@/lib/types'
+import { CustomScrollbar } from './custom-scrollbar'
+
+// 실제 DB 스키마에 맞는 타입 정의
+interface Timeline {
+  id: string
+  name_ko: string
+  name_en: string | null
+  sort_order: number | null
+  is_active: boolean
+}
+
+interface Grade {
+  id: string
+  code: string  // API에서 id를 code로 매핑
+  name_ko: string | null
+  name_en: string | null
+  scale: string | null
+  sort_order: number | null
+  is_active: boolean
+}
+
+interface Series {
+  id: string
+  name_ko: string
+  name_en: string | null
+  year_start: number | null
+  year_end: number | null
+  media_type: string | null
+  timeline_id: string | null
+  timeline: { id: string; name_ko: string } | null
+}
 
 interface LimitedType {
   id: string
-  code: string
   name_ko: string
   name_en: string | null
   description: string | null
   badge_color: string | null
   sort_order: number | null
+  is_active: boolean
 }
 
 interface FilterOptions {
@@ -34,12 +65,15 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
     series: [],
     limitedTypes: [],
   })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [isOpen, setIsOpen] = useState(false)
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false)
   const sortDropdownRef = useRef<HTMLDivElement>(null)
   
   // 선택된 필터
   const [selectedGrades, setSelectedGrades] = useState<string[]>([])
+  const [selectedScales, setSelectedScales] = useState<string[]>([])
   const [selectedSeries, setSelectedSeries] = useState<string[]>([])
   const [selectedLimitedTypes, setSelectedLimitedTypes] = useState<string[]>([])
   const [priceMin, setPriceMin] = useState<string>('')
@@ -75,6 +109,7 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
   useEffect(() => {
     const filters = {
       grade: selectedGrades,
+      scale: selectedScales,
       series: selectedSeries,
       limitedTypes: selectedLimitedTypes,
       priceMin: priceMin ? parseInt(priceMin) : undefined,
@@ -83,21 +118,71 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
       sortOrder,
     }
     onFilterChange(filters)
-  }, [selectedGrades, selectedSeries, selectedLimitedTypes, priceMin, priceMax, sortBy, sortOrder])
+  }, [selectedGrades, selectedScales, selectedSeries, selectedLimitedTypes, priceMin, priceMax, sortBy, sortOrder])
 
   async function fetchFilterOptions() {
     try {
+      setLoading(true)
+      setError(null)
+      
       const response = await fetch('/api/filters')
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
       const result = await response.json()
-      setOptions(result.data)
-    } catch (error) {
-      console.error('Failed to fetch filter options:', error)
+      
+      if (result.error && !result.data) {
+        throw new Error(result.error)
+      }
+      
+      if (result.data) {
+        setOptions({
+          timelines: result.data.timelines || [],
+          grades: result.data.grades || [],
+          series: result.data.series || [],
+          limitedTypes: result.data.limitedTypes || [],
+        })
+      } else {
+        setOptions({
+          timelines: result.timelines || [],
+          grades: result.grades || [],
+          series: result.series || [],
+          limitedTypes: result.limitedTypes || [],
+        })
+      }
+    } catch (err) {
+      console.error('Failed to fetch filter options:', err)
+      setError(err instanceof Error ? err.message : '필터 옵션을 불러오는데 실패했습니다')
+    } finally {
+      setLoading(false)
     }
   }
+
+  // 등급에서 고유 스케일 목록 추출
+  const uniqueScales = [...new Set(
+    options.grades
+      .map(g => g.scale)
+      .filter((scale): scale is string => scale !== null && scale !== '')
+  )].sort((a, b) => {
+    // 스케일 정렬: 1/144 -> 1/100 -> 1/60 순서
+    const getScaleValue = (s: string) => {
+      const match = s.match(/1\/(\d+)/)
+      return match ? parseInt(match[1]) : 9999
+    }
+    return getScaleValue(b) - getScaleValue(a)  // 숫자가 큰 것(작은 스케일)이 먼저
+  })
 
   const handleGradeToggle = (code: string) => {
     setSelectedGrades(prev =>
       prev.includes(code) ? prev.filter(g => g !== code) : [...prev, code]
+    )
+  }
+
+  const handleScaleToggle = (scale: string) => {
+    setSelectedScales(prev =>
+      prev.includes(scale) ? prev.filter(s => s !== scale) : [...prev, scale]
     )
   }
 
@@ -115,6 +200,7 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
 
   const handleReset = () => {
     setSelectedGrades([])
+    setSelectedScales([])
     setSelectedSeries([])
     setSelectedLimitedTypes([])
     setPriceMin('')
@@ -125,6 +211,7 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
 
   const activeFilterCount = 
     selectedGrades.length + 
+    selectedScales.length +
     selectedSeries.length + 
     selectedLimitedTypes.length +
     (priceMin ? 1 : 0) + 
@@ -145,11 +232,31 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
 
       {/* 필터 패널 */}
       <div className={`space-y-6 ${isOpen ? 'block' : 'hidden lg:block'}`}>
+        {/* 로딩 상태 */}
+        {loading && (
+          <div className="card-threads text-center py-4">
+            <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent mb-2"></div>
+            <p className="text-sm text-muted-foreground">필터 로딩 중...</p>
+          </div>
+        )}
+
+        {/* 에러 상태 */}
+        {error && (
+          <div className="card-threads bg-red-900/20 border-red-900">
+            <p className="text-sm text-red-400 mb-2">{error}</p>
+            <button
+              onClick={fetchFilterOptions}
+              className="text-xs text-primary hover:underline"
+            >
+              다시 시도
+            </button>
+          </div>
+        )}
+
         {/* 정렬 */}
         <div className="card-threads">
           <h3 className="font-bold mb-3">정렬</h3>
           <div className="space-y-2">
-            {/* 커스텀 드롭다운 */}
             <div className="relative" ref={sortDropdownRef}>
               <button
                 type="button"
@@ -167,7 +274,6 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
                 </svg>
               </button>
               
-              {/* 드롭다운 메뉴 */}
               {isSortDropdownOpen && (
                 <div className="absolute z-50 w-full mt-1 py-1 bg-card border border-border rounded-xl shadow-lg overflow-hidden">
                   {sortOptions.map((option) => (
@@ -216,47 +322,94 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
           </div>
         </div>
 
-        {/* 등급 */}
-        <div className="card-threads">
-          <h3 className="font-bold mb-3">등급</h3>
-          <div className="flex flex-wrap gap-2">
-            {options.grades.map((grade) => (
-              <button
-                key={grade.id}
-                onClick={() => handleGradeToggle(grade.code)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  selectedGrades.includes(grade.code)
-                    ? 'bg-primary text-black'
-                    : 'bg-secondary text-foreground hover:bg-accent'
-                }`}
-              >
-                {grade.code}
-              </button>
-            ))}
+        {/* 등급 (스케일 제외) */}
+        {!loading && (
+          <div className="card-threads">
+            <h3 className="font-bold mb-3">
+              등급
+              {options.grades.length === 0 && (
+                <span className="text-xs text-muted-foreground ml-2">(데이터 없음)</span>
+              )}
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {options.grades.length === 0 ? (
+                <p className="text-sm text-muted-foreground">등급 데이터를 불러올 수 없습니다</p>
+              ) : (
+                options.grades.map((grade) => (
+                  <button
+                    key={grade.id}
+                    onClick={() => handleGradeToggle(grade.code)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      selectedGrades.includes(grade.code)
+                        ? 'bg-primary text-black'
+                        : 'bg-secondary text-foreground hover:bg-accent'
+                    }`}
+                    title={grade.name_ko || grade.id}
+                  >
+                    {grade.id}
+                  </button>
+                ))
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* 시리즈 - 년도순 정렬 */}
-        <div className="card-threads">
-          <h3 className="font-bold mb-3">시리즈</h3>
-          <div className="flex flex-col gap-1.5">
-            {[...options.series]
-              .sort((a, b) => (a.year_start || 9999) - (b.year_start || 9999))
-              .map((series) => (
-              <button
-                key={series.id}
-                onClick={() => handleSeriesToggle(series.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-left ${
-                  selectedSeries.includes(series.id)
-                    ? 'bg-primary text-black'
-                    : 'bg-secondary text-foreground hover:bg-accent'
-                }`}
-              >
-                {series.name_ko}
-              </button>
-            ))}
+        {/* 스케일 (등급에서 분리) */}
+        {!loading && uniqueScales.length > 0 && (
+          <div className="card-threads">
+            <h3 className="font-bold mb-3">스케일</h3>
+            <div className="flex flex-wrap gap-2">
+              {uniqueScales.map((scale) => (
+                <button
+                  key={scale}
+                  onClick={() => handleScaleToggle(scale)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    selectedScales.includes(scale)
+                      ? 'bg-primary text-black'
+                      : 'bg-secondary text-foreground hover:bg-accent'
+                  }`}
+                >
+                  {scale}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* 시리즈 - 커스텀 스크롤바 적용, 년도 표기 삭제 */}
+        {!loading && (
+          <div className="card-threads">
+            <h3 className="font-bold mb-3">
+              시리즈
+              {options.series.length === 0 && (
+                <span className="text-xs text-muted-foreground ml-2">(데이터 없음)</span>
+              )}
+            </h3>
+            {options.series.length === 0 ? (
+              <p className="text-sm text-muted-foreground">시리즈 데이터를 불러올 수 없습니다</p>
+            ) : (
+              <CustomScrollbar maxHeight="280px">
+                <div className="flex flex-col gap-1.5 pr-1">
+                  {[...options.series]
+                    .sort((a, b) => (a.year_start || 9999) - (b.year_start || 9999))
+                    .map((series) => (
+                    <button
+                      key={series.id}
+                      onClick={() => handleSeriesToggle(series.id)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-left ${
+                        selectedSeries.includes(series.id)
+                          ? 'bg-primary text-black'
+                          : 'bg-secondary text-foreground hover:bg-accent'
+                      }`}
+                    >
+                      {series.name_ko}
+                    </button>
+                  ))}
+                </div>
+              </CustomScrollbar>
+            )}
+          </div>
+        )}
 
         {/* 가격 범위 */}
         <div className="card-threads">
@@ -279,8 +432,8 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
           </div>
         </div>
 
-        {/* 한정판 - 동적 로드 */}
-        {options.limitedTypes.length > 0 && (
+        {/* 한정판 */}
+        {!loading && options.limitedTypes.length > 0 && (
           <div className="card-threads">
             <h3 className="font-bold mb-3">한정판</h3>
             <div className="flex flex-col gap-1.5">

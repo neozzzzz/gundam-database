@@ -11,14 +11,13 @@ const PAGE_CONFIG = ADMIN_PAGES.factions
 export default function EditFaction() {
   const router = useRouter()
   const params = useParams()
-  const factionId = params?.id as string
+  const factionId = params?.id as string  // V1.10: id가 곧 code (VARCHAR)
   const supabase = createClient()
   
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   
   const [formData, setFormData] = useState({
-    code: '',
     name_ko: '',
     name_en: '',
     universe: '',
@@ -50,7 +49,6 @@ export default function EditFaction() {
 
       if (data) {
         setFormData({
-          code: data.code || '',
           name_ko: data.name_ko || '',
           name_en: data.name_en || '',
           universe: data.universe || '',
@@ -69,15 +67,15 @@ export default function EditFaction() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.code.trim() || !formData.name_ko.trim()) {
-      alert('코드와 이름(한글)은 필수입니다.')
+    if (!formData.name_ko.trim()) {
+      alert('이름(한글)은 필수입니다.')
       return
     }
 
     try {
       setSaving(true)
+      // V1.10: id(code)는 변경 불가, 나머지 필드만 업데이트
       const { error } = await supabase.from('factions').update({
-        code: formData.code.trim().toUpperCase(),
         name_ko: formData.name_ko.trim(),
         name_en: formData.name_en?.trim() || null,
         universe: formData.universe || null,
@@ -114,13 +112,20 @@ export default function EditFaction() {
           
           <AdminFormSection title="기본 정보">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <AdminTextField label="이름 (한글)" name="name_ko" value={formData.name_ko} onChange={handleChange} required />
-              <AdminTextField label="이름 (영문)" name="name_en" value={formData.name_en} onChange={handleChange} />
+              {/* V1.10: ID 읽기 전용 표시 */}
               <div>
-                <label className={ADMIN_STYLES.label}>코드 <span className="text-red-500">*</span></label>
-                <input type="text" name="code" value={formData.code} onChange={handleChange} className={`${ADMIN_STYLES.input} font-mono uppercase`} required />
+                <label className={ADMIN_STYLES.label}>ID (코드)</label>
+                <input 
+                  type="text" 
+                  value={factionId} 
+                  disabled 
+                  className={`${ADMIN_STYLES.input} font-mono bg-gray-100 text-gray-600 cursor-not-allowed`} 
+                />
+                <p className="text-xs text-gray-500 mt-1">ID는 변경할 수 없습니다</p>
               </div>
               <AdminTextField label="정렬 순서" name="sort_order" value={formData.sort_order} onChange={handleChange} type="number" />
+              <AdminTextField label="이름 (한글)" name="name_ko" value={formData.name_ko} onChange={handleChange} required />
+              <AdminTextField label="이름 (영문)" name="name_en" value={formData.name_en} onChange={handleChange} />
             </div>
           </AdminFormSection>
 

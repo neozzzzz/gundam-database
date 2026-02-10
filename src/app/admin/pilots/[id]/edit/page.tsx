@@ -15,13 +15,12 @@ import {
   AdminLoading
 } from '@/components/admin'
 
-// 페이지 설정
 const PAGE_CONFIG = ADMIN_PAGES.pilots
 
 export default function EditPilot() {
   const router = useRouter()
   const params = useParams()
-  const pilotId = params?.id as string
+  const pilotId = params?.id as string  // V1.10: id가 곧 code (VARCHAR)
   const supabase = createClient()
   
   const [loading, setLoading] = useState(true)
@@ -29,7 +28,6 @@ export default function EditPilot() {
   const [factions, setFactions] = useState<any[]>([])
   
   const [formData, setFormData] = useState({
-    code: '',
     name_ko: '',
     name_en: '',
     name_ja: '',
@@ -96,7 +94,6 @@ export default function EditPilot() {
 
       if (data) {
         setFormData({
-          code: data.code || '',
           name_ko: data.name_ko || '',
           name_en: data.name_en || '',
           name_ja: data.name_ja || '',
@@ -133,8 +130,8 @@ export default function EditPilot() {
     try {
       setSaving(true)
 
+      // V1.10: id는 변경 불가, 나머지 필드만 업데이트
       const pilotData = {
-        code: formData.code?.trim().toUpperCase() || null,
         name_ko: formData.name_ko.trim(),
         name_en: formData.name_en?.trim() || null,
         name_ja: formData.name_ja?.trim() || null,
@@ -182,7 +179,6 @@ export default function EditPilot() {
     })
   }
 
-  // 로딩 화면
   if (loading) {
     return (
       <AdminLoading 
@@ -217,6 +213,30 @@ export default function EditPilot() {
             </div>
           </AdminFormSection>
 
+          {/* 식별 정보 */}
+          <AdminFormSection title="식별 정보">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* V1.10: ID 읽기 전용 표시 */}
+              <div>
+                <label className={ADMIN_STYLES.label}>ID (코드)</label>
+                <input
+                  type="text"
+                  value={pilotId}
+                  disabled
+                  className={`${ADMIN_STYLES.input} font-mono bg-gray-100 text-gray-600 cursor-not-allowed`}
+                />
+                <p className="text-xs text-gray-500 mt-1">ID는 변경할 수 없습니다</p>
+              </div>
+
+              <AdminTextField
+                label="계급"
+                name="rank"
+                value={formData.rank}
+                onChange={handleChange}
+              />
+            </div>
+          </AdminFormSection>
+
           {/* 기본 정보 */}
           <AdminFormSection title="기본 정보">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -242,25 +262,6 @@ export default function EditPilot() {
                 onChange={handleChange}
               />
 
-              <div>
-                <label className={ADMIN_STYLES.label}>코드</label>
-                <input
-                  type="text"
-                  name="code"
-                  value={formData.code}
-                  onChange={handleChange}
-                  placeholder="AMURO"
-                  className={`${ADMIN_STYLES.input} font-mono uppercase`}
-                />
-              </div>
-
-              <AdminTextField
-                label="계급"
-                name="rank"
-                value={formData.rank}
-                onChange={handleChange}
-              />
-
               <AdminTextField
                 label="국적"
                 name="nationality"
@@ -277,7 +278,7 @@ export default function EditPilot() {
                 label="소속 진영"
                 options={factions.map(f => ({ 
                   value: f.id, 
-                  label: f.name_ko, 
+                  label: `${f.name_ko} (${f.id})`, 
                   color: f.color 
                 }))}
                 value={formData.affiliation_default_id}

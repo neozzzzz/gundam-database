@@ -33,7 +33,6 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         grade:grades(*),
-        brand:brands(*),
         series:series(*),
         limited_type:limited_types(*),
         kit_images!kit_images_kit_id_fkey(image_url, is_primary)
@@ -55,17 +54,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    if (filters.brand && filters.brand.length > 0) {
-      const { data: brandsData } = await supabase
-        .from('brands')
-        .select('id')
-        .in('code', filters.brand)
-      
-      if (brandsData && brandsData.length > 0) {
-        const brandIds = brandsData.map(b => b.id)
-        query = query.in('brand_id', brandIds)
-      }
-    }
+    // brand 필터 제거됨 (brands 테이블 비활성화)
 
     if (filters.series && filters.series.length > 0) {
       query = query.in('series_id', filters.series)

@@ -1,9 +1,12 @@
+// src/app/admin/kits/page.tsx
+// 킷 관리 페이지
+// V1.11: checkAuth 제거 (layout에서 처리) + useAdminList hook 적용
+
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 import { ADMIN_PAGES, ADMIN_STYLES } from '@/lib/constants/admin-config'
 import { 
   AdminPageHeader, 
@@ -12,120 +15,78 @@ import {
   AdminSearchFilter,
   AdminBadgeFilter 
 } from '@/components/admin'
+import { useAdminList } from '@/lib/admin'
 
 const PAGE_CONFIG = ADMIN_PAGES.kits
 
 export default function KitsAdmin() {
-  const router = useRouter()
   const supabase = createClient()
   
-  const [loading, setLoading] = useState(true)
-  const [kits, setKits] = useState<any[]>([])
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedGrades, setSelectedGrades] = useState<string[]>([])
+  // 등급 목록 (필터용)
   const [grades, setGrades] = useState<any[]>([])
-  
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage] = useState(40)
-  const [totalCount, setTotalCount] = useState(0)
+  const [selectedGrades, setSelectedGrades] = useState<string[]>([])
 
+  // useAdminList hook 사용
+  const {
+    items: kits,
+    totalCount,
+    totalPages,
+    isLoading,
+    searchTerm,
+    setSearchTerm,
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    deleteItem,
+    setFilter,
+    reload,
+  } = useAdminList({
+    tableName: 'gundam_kits',
+    searchColumns: ['name_ko', 'name_en'],
+    defaultOrderBy: 'updated_at',
+    defaultOrderAsc: false,
+    pageSize: 40,
+    selectQuery: '*, grade:grades(id, name_ko), series:series(name_ko)',
+  })
+
+  // 등급 목록 로드
   useEffect(() => {
-    checkAuth()
     loadGrades()
   }, [])
 
+  // 등급 필터 변경 시 적용
   useEffect(() => {
-    loadKits()
-  }, [currentPage, searchTerm, selectedGrades, grades])
-
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session || session.user.email !== process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
-      router.push('/admin/login')
+    if (selectedGrades.length > 0) {
+      setFilter('grade_id', selectedGrades)
+    } else {
+      setFilter('grade_id', undefined)
     }
-  }
+  }, [selectedGrades, setFilter])
 
   const loadGrades = async () => {
     const { data } = await supabase
       .from('grades')
-      .select('*')
+      .select('id, name_ko')
       .order('sort_order')
     setGrades(data || [])
   }
 
-  const loadKits = async () => {
-    try {
-      setLoading(true)
-      let query = supabase
-        .from('gundam_kits')
-        .select(`*, grade:grades(code, name), series:series(name_ko)`, { count: 'exact' })
-        .order('updated_at', { ascending: false })
-
-      if (searchTerm) {
-        query = query.or(`name_ko.ilike.%${searchTerm}%,name_en.ilike.%${searchTerm}%`)
-      }
-
-      if (selectedGrades.length > 0 && grades.length > 0) {
-        const gradeIds = grades.filter(g => selectedGrades.includes(g.code)).map(g => g.id)
-        if (gradeIds.length > 0) {
-          query = query.in('grade_id', gradeIds)
-        }
-      }
-
-      const { data: allData, error, count } = await query
-
-      if (error) throw error
-      
-      const sortedData = (allData || []).sort((a, b) => {
-        const aUpdated = new Date(a.updated_at).getTime()
-        const aCreated = new Date(a.created_at).getTime()
-        const bUpdated = new Date(b.updated_at).getTime()
-        const bCreated = new Date(b.created_at).getTime()
-        
-        const aModified = Math.abs(aUpdated - aCreated) > 1000
-        const bModified = Math.abs(bUpdated - bCreated) > 1000
-        
-        if (aModified && !bModified) return -1
-        if (!aModified && bModified) return 1
-        if (aModified && bModified) return bUpdated - aUpdated
-        return bCreated - aCreated
-      })
-      
-      const from = (currentPage - 1) * itemsPerPage
-      const to = from + itemsPerPage
-      setKits(sortedData.slice(from, to))
-      setTotalCount(count || 0)
-    } catch (error: any) {
-      console.error('킷 로딩 오류:', error)
-      alert(`오류: ${error.message}`)
-    } finally {
-      setLoading(false)
-    }
+  // 삭제 핸들러
+  const handleDelete = (id: string, name: string) => {
+    deleteItem(id, `${name} ${PAGE_CONFIG.titleSingle}`)
   }
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`"${name}" ${PAGE_CONFIG.titleSingle}을(를) 삭제하시겠습니까?`)) return
-
-    try {
-      const { error } = await supabase.from('gundam_kits').delete().eq('id', id)
-      if (error) throw error
-      alert('삭제되었습니다!')
-      loadKits()
-    } catch (error: any) {
-      alert(`삭제 실패: ${error.message}`)
-    }
-  }
-
-  const toggleGrade = (gradeCode: string) => {
+  // 등급 토글
+  const toggleGrade = (gradeId: string) => {
     setSelectedGrades(prev => 
-      prev.includes(gradeCode) ? prev.filter(g => g !== gradeCode) : [...prev, gradeCode]
+      prev.includes(gradeId) 
+        ? prev.filter(g => g !== gradeId) 
+        : [...prev, gradeId]
     )
-    setCurrentPage(1)
   }
 
-  const totalPages = Math.ceil(totalCount / itemsPerPage)
-
-  if (loading && kits.length === 0) {
+  // 로딩 상태
+  if (isLoading && kits.length === 0) {
     return <AdminLoading message={`${PAGE_CONFIG.titleSingle} 목록을 불러오는 중...`} spinnerColor={PAGE_CONFIG.color.primary} />
   }
 
@@ -142,25 +103,27 @@ export default function KitsAdmin() {
       />
 
       <main className={ADMIN_STYLES.mainContainer}>
+        {/* 필터 영역 */}
         <div className={ADMIN_STYLES.filterCard}>
           <div className="space-y-4">
             <AdminSearchFilter
               searchTerm={searchTerm}
-              onSearchChange={(value) => { setSearchTerm(value); setCurrentPage(1) }}
+              onSearchChange={setSearchTerm}
               placeholder={PAGE_CONFIG.searchPlaceholder}
             />
             <AdminBadgeFilter
               label="등급 필터"
-              options={grades.map(g => ({ code: g.code, name: g.code }))}
+              options={grades.map(g => ({ code: g.id, name: g.id }))}
               selected={selectedGrades}
               onSelect={toggleGrade}
-              onClear={() => { setSelectedGrades([]); setCurrentPage(1) }}
+              onClear={() => setSelectedGrades([])}
               multiple={true}
               accentColor={PAGE_CONFIG.color.primary}
             />
           </div>
         </div>
 
+        {/* 테이블 */}
         <div className={ADMIN_STYLES.tableCard}>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -177,11 +140,13 @@ export default function KitsAdmin() {
                 {kits.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                      {searchTerm || selectedGrades.length > 0 ? '검색 결과가 없습니다.' : `등록된 ${PAGE_CONFIG.titleSingle}이(가) 없습니다.`}
+                      {searchTerm || selectedGrades.length > 0 
+                        ? '검색 결과가 없습니다.' 
+                        : `등록된 ${PAGE_CONFIG.titleSingle}이(가) 없습니다.`}
                     </td>
                   </tr>
                 ) : (
-                  kits.map((kit) => (
+                  kits.map((kit: any) => (
                     <tr key={kit.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
                         <div className="font-medium text-gray-900">{kit.name_ko}</div>
@@ -189,7 +154,7 @@ export default function KitsAdmin() {
                       </td>
                       <td className={ADMIN_STYLES.tableCell}>
                         <span className={`px-2 py-1 rounded text-xs font-semibold ${PAGE_CONFIG.color.badge}`}>
-                          {kit.grade?.code || '-'}
+                          {kit.grade?.id || '-'}
                         </span>
                       </td>
                       <td className={`${ADMIN_STYLES.tableCell} text-sm text-gray-600`}>
@@ -200,10 +165,16 @@ export default function KitsAdmin() {
                       </td>
                       <td className={`${ADMIN_STYLES.tableCell} text-right text-sm`}>
                         <div className="flex items-center justify-end gap-2">
-                          <Link href={`${PAGE_CONFIG.basePath}/${kit.id}/edit`} className={`${PAGE_CONFIG.color.text} ${PAGE_CONFIG.color.textHover} font-medium`}>
+                          <Link 
+                            href={`${PAGE_CONFIG.basePath}/${kit.id}/edit`} 
+                            className={`${PAGE_CONFIG.color.text} ${PAGE_CONFIG.color.textHover} font-medium`}
+                          >
                             수정
                           </Link>
-                          <button onClick={() => handleDelete(kit.id, kit.name_ko)} className="text-red-600 hover:text-red-800 font-medium">
+                          <button 
+                            onClick={() => handleDelete(kit.id, kit.name_ko)} 
+                            className="text-red-600 hover:text-red-800 font-medium"
+                          >
                             삭제
                           </button>
                         </div>
@@ -214,7 +185,15 @@ export default function KitsAdmin() {
               </tbody>
             </table>
           </div>
-          <AdminPagination currentPage={currentPage} totalPages={totalPages} totalCount={totalCount} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} accentColor={PAGE_CONFIG.color.primary} />
+          
+          <AdminPagination 
+            currentPage={currentPage} 
+            totalPages={totalPages} 
+            totalCount={totalCount} 
+            itemsPerPage={pageSize} 
+            onPageChange={setCurrentPage} 
+            accentColor={PAGE_CONFIG.color.primary} 
+          />
         </div>
       </main>
     </div>

@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import ImageUpload from '@/components/image-upload'
 import { ADMIN_PAGES, ADMIN_STYLES } from '@/lib/constants/admin-config'
 import { 
@@ -14,6 +14,7 @@ import {
   AdminSubmitButtons,
   AdminLoading 
 } from '@/components/admin'
+import AdminAutocomplete from '@/components/admin/AdminAutocomplete'
 
 const PAGE_CONFIG = ADMIN_PAGES.kits
 
@@ -23,6 +24,14 @@ const STATUS_OPTIONS = [
   { value: 'upcoming', label: '출시예정', color: '#CA8A04' },
 ]
 
+// 모빌슈트 타입 정의
+interface MobileSuit {
+  id: string
+  name_ko: string
+  name_en?: string
+  model_number?: string
+}
+
 export default function AddKit() {
   const router = useRouter()
   const supabase = createClient()
@@ -31,10 +40,9 @@ export default function AddKit() {
   const [dataLoading, setDataLoading] = useState(true)
   const [grades, setGrades] = useState<any[]>([])
   const [series, setSeries] = useState<any[]>([])
-  const [mobileSuits, setMobileSuits] = useState<any[]>([])
-  const [factions, setFactions] = useState<any[]>([])
-  const [factionsMap, setFactionsMap] = useState<Record<string, any>>({})
-  const [searchTerm, setSearchTerm] = useState('')
+  
+  // 모빌슈트 자동완성용
+  const [selectedMobileSuit, setSelectedMobileSuit] = useState<MobileSuit | null>(null)
   
   const scaleOptions = ['1/144', '1/100', '1/60', 'Non-scale']
   
@@ -43,14 +51,13 @@ export default function AddKit() {
     name_en: '',
     grade_id: '',
     series_id: '',
-    mobile_suit_id: '',
     scale: '1/144',
     price_krw: '',
     price_jpy: '',
     product_code: '',
     release_date: '',
     description: '',
-    status: 'active',
+    status: '',
     box_art_url: '',
   })
 
@@ -70,27 +77,30 @@ export default function AddKit() {
     try {
       setDataLoading(true)
       
-      const [gradesRes, seriesRes, factionsRes, mobileSuitsRes] = await Promise.all([
-        supabase.from('grades').select('*').order('sort_order'),
-        supabase.from('series').select('*').order('name_ko'),
-        supabase.from('factions').select('*').order('sort_order'),
-        supabase.from('mobile_suits').select('id, name_ko, name_en, model_number, faction_id').order('name_ko'),
+      // V1.10: grades.id가 곧 코드 (예: 'HG', 'MG')
+      const [gradesRes, seriesRes] = await Promise.all([
+        supabase.from('grades').select('id, name_ko').order('sort_order'),
+        supabase.from('series').select('id, name_ko').order('name_ko'),
       ])
 
       setGrades(gradesRes.data || [])
       setSeries(seriesRes.data || [])
-      setFactions(factionsRes.data || [])
-      setMobileSuits(mobileSuitsRes.data || [])
-      
-      const fMap: Record<string, any> = {}
-      factionsRes.data?.forEach(f => { fMap[f.id] = f })
-      setFactionsMap(fMap)
     } catch (error) {
       console.error('데이터 로딩 오류:', error)
     } finally {
       setDataLoading(false)
     }
   }
+
+  // 모빌슈트 검색 함수
+  const searchMobileSuits = useCallback(async (query: string): Promise<MobileSuit[]> => {
+    const { data } = await supabase
+      .from('mobile_suits')
+      .select('id, name_ko, name_en, model_number')
+      .or(`name_ko.ilike.%${query}%,name_en.ilike.%${query}%,model_number.ilike.%${query}%`)
+      .limit(10)
+    return data || []
+  }, [supabase])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -108,7 +118,7 @@ export default function AddKit() {
         name_en: formData.name_en?.trim() || null,
         grade_id: formData.grade_id || null,
         series_id: formData.series_id || null,
-        mobile_suit_id: formData.mobile_suit_id || null,
+        mobile_suit_id: selectedMobileSuit?.id || null,
         scale: formData.scale || null,
         price_krw: formData.price_krw ? parseInt(formData.price_krw) : null,
         price_jpy: formData.price_jpy ? parseInt(formData.price_jpy) : null,
@@ -137,14 +147,6 @@ export default function AddKit() {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
-  const filteredMobileSuits = mobileSuits.filter(ms => {
-    const search = searchTerm.toLowerCase()
-    return ms.name_ko?.toLowerCase().includes(search) || ms.name_en?.toLowerCase().includes(search) || ms.model_number?.toLowerCase().includes(search)
-  })
-
-  const selectedMobileSuit = mobileSuits.find(ms => ms.id === formData.mobile_suit_id)
-  const getFaction = (factionId: string) => factionsMap[factionId] || null
-
   if (dataLoading) {
     return <AdminLoading message="데이터를 불러오는 중..." spinnerColor={PAGE_CONFIG.color.primary} />
   }
@@ -171,7 +173,7 @@ export default function AddKit() {
             <div className="mt-6">
               <AdminSelectButtons
                 label="등급"
-                options={grades.map(g => ({ value: g.id, label: g.code }))}
+                options={grades.map(g => ({ value: g.id, label: g.id }))}
                 value={formData.grade_id}
                 onChange={(v) => setFormData({ ...formData, grade_id: v })}
                 accentColor={PAGE_CONFIG.color.bgSolid}
@@ -201,53 +203,26 @@ export default function AddKit() {
             </div>
           </AdminFormSection>
 
+          {/* 모빌슈트 연결 - AdminAutocomplete 사용 */}
           <AdminFormSection title="모빌슈트 연결">
-            {selectedMobileSuit && (
-              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-gray-900">{selectedMobileSuit.name_ko}</div>
-                    {selectedMobileSuit.model_number && <div className="text-sm text-gray-600 font-mono">{selectedMobileSuit.model_number}</div>}
-                    {getFaction(selectedMobileSuit.faction_id) && (
-                      <span className="mt-1 inline-block px-2 py-0.5 rounded text-xs text-white" style={{ backgroundColor: getFaction(selectedMobileSuit.faction_id)?.color || '#6B7280' }}>
-                        {getFaction(selectedMobileSuit.faction_id)?.name_ko}
-                      </span>
-                    )}
+            <AdminAutocomplete<MobileSuit>
+              label="모빌슈트 선택"
+              placeholder="모빌슈트 이름, 모델 번호로 검색..."
+              value={selectedMobileSuit}
+              onChange={setSelectedMobileSuit}
+              onSearch={searchMobileSuits}
+              displayField="name_ko"
+              renderItem={(ms) => (
+                <div>
+                  <div className="font-medium text-gray-900">{ms.name_ko}</div>
+                  <div className="text-sm text-gray-500">
+                    {ms.name_en && <span>{ms.name_en}</span>}
+                    {ms.model_number && <span className="ml-2 font-mono text-xs bg-gray-100 px-1 rounded">{ms.model_number}</span>}
                   </div>
-                  <button type="button" onClick={() => setFormData({ ...formData, mobile_suit_id: '' })} className="text-red-500 hover:text-red-700">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div className="mb-4">
-              <label className={ADMIN_STYLES.label}>모빌슈트 검색</label>
-              <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="이름, 모델 넘버로 검색..." className={ADMIN_STYLES.input} />
-            </div>
-
-            <div className="max-h-80 overflow-y-auto border border-gray-300 rounded-lg">
-              {filteredMobileSuits.length === 0 ? (
-                <div className="p-4 text-center text-gray-500">{searchTerm ? '검색 결과가 없습니다' : '등록된 모빌슈트가 없습니다'}</div>
-              ) : (
-                <div className="divide-y divide-gray-200">
-                  <button type="button" onClick={() => setFormData({ ...formData, mobile_suit_id: '' })} className={`w-full p-3 text-left hover:bg-gray-50 ${formData.mobile_suit_id === '' ? 'bg-gray-100' : ''}`}>
-                    <div className="text-gray-500 text-sm">선택 안 함</div>
-                  </button>
-                  {filteredMobileSuits.map((ms) => {
-                    const faction = getFaction(ms.faction_id)
-                    return (
-                      <button key={ms.id} type="button" onClick={() => { setFormData({ ...formData, mobile_suit_id: ms.id }); setSearchTerm('') }}
-                        className={`w-full p-3 text-left hover:bg-blue-50 ${formData.mobile_suit_id === ms.id ? 'bg-blue-100' : ''}`}>
-                        <div className="font-medium text-gray-900">{ms.name_ko}</div>
-                        {ms.model_number && <div className="text-sm text-gray-600 font-mono">{ms.model_number}</div>}
-                        {faction && <span className="mt-1 inline-block px-2 py-0.5 rounded text-xs text-white" style={{ backgroundColor: faction.color || '#6B7280' }}>{faction.name_ko}</span>}
-                      </button>
-                    )
-                  })}
                 </div>
               )}
-            </div>
+              selectedMessage={(ms) => `모빌슈트 선택됨: ${ms.name_ko}${ms.model_number ? ` (${ms.model_number})` : ''}`}
+            />
           </AdminFormSection>
 
           <AdminFormSection title="가격 정보">
@@ -279,7 +254,7 @@ export default function AddKit() {
               options={STATUS_OPTIONS}
               value={formData.status}
               onChange={(v) => setFormData({ ...formData, status: v })}
-              allowEmpty={false}
+              allowEmpty={true}
             />
           </AdminFormSection>
 

@@ -13,8 +13,9 @@ interface AdminPageHeaderProps {
   addButtonLabel?: string
   addButtonHref?: string
   color: {
-    bgSolid: string
-    bgSolidHover: string
+    bgSolid?: string
+    bgSolidHover?: string
+    primary?: string
   }
 }
 
@@ -27,6 +28,9 @@ export function AdminPageHeader({
   addButtonHref,
   color,
 }: AdminPageHeaderProps) {
+  // 버튼 배경색: bgSolid > primary > 기본 회색
+  const buttonBgColor = color.bgSolid || color.primary || '#374151'
+  
   return (
     <header className="bg-white shadow">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -51,7 +55,8 @@ export function AdminPageHeader({
           {addButtonLabel && addButtonHref && (
             <Link
               href={addButtonHref}
-              className={`px-4 py-2 ${color.bgSolid} text-white rounded-lg ${color.bgSolidHover} transition-colors`}
+              className="px-4 py-2 text-white rounded-lg transition-colors hover:opacity-90"
+              style={{ backgroundColor: buttonBgColor }}
             >
               + {addButtonLabel}
             </Link>
