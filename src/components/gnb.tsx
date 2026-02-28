@@ -26,12 +26,10 @@ export function GNB() {
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-black/80 border-b border-border">
       <div className="max-w-7xl mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          <Link href="/" className="text-2xl font-bold text-gradient hover:opacity-80 transition-opacity">
-            GUNDAM ARCHIVE
-          </Link>
-
-          {/* 데스크톱 nav */}
-          <nav className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-6">
+            <Link href="/" className="text-2xl font-bold text-gradient hover:opacity-80 transition-opacity">
+              GUNDAM ARCHIVE
+            </Link>
             {navItems.map(({ href, label }) => (
               <Link
                 key={href}
@@ -45,8 +43,15 @@ export function GNB() {
                 {label}
               </Link>
             ))}
+          </div>
+          <div className="hidden md:block">
             <AuthButton />
-          </nav>
+          </div>
+
+          {/* 모바일 로고 */}
+          <Link href="/" className="md:hidden text-2xl font-bold text-gradient hover:opacity-80 transition-opacity">
+            GUNDAM ARCHIVE
+          </Link>
 
           {/* 모바일: 아바타 + 햄버거 */}
           <div className="md:hidden flex items-center gap-3">
