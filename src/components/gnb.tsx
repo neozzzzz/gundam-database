@@ -26,7 +26,7 @@ export function GNB() {
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-black/80 border-b border-border">
       <div className="max-w-7xl mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-8">
             <Link href="/" className="text-2xl font-bold text-gradient hover:opacity-80 transition-opacity">
               GUNDAM ARCHIVE
             </Link>
@@ -34,11 +34,11 @@ export function GNB() {
               <Link
                 key={href}
                 href={href}
-                className={
+                className={`text-lg ${
                   isActive(href)
                     ? 'text-primary'
                     : 'text-muted-foreground hover:text-foreground transition-colors'
-                }
+                }`
               >
                 {label}
               </Link>
