@@ -48,10 +48,20 @@ export default function KitDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
-          <p className="mt-4 text-muted-foreground">로딩 중...</p>
+      <div className="min-h-screen">
+        <div className="max-w-7xl mx-auto px-4 pt-4 pb-8">
+          <div className="h-7 w-24 bg-secondary rounded animate-pulse" />
+        </div>
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="aspect-[4/3] bg-secondary rounded-2xl animate-pulse" />
+            <div className="space-y-4">
+              <div className="h-8 w-3/4 bg-secondary rounded animate-pulse" />
+              <div className="h-6 w-1/2 bg-secondary rounded animate-pulse" />
+              <div className="h-4 w-full bg-secondary rounded animate-pulse" />
+              <div className="h-4 w-2/3 bg-secondary rounded animate-pulse" />
+            </div>
+          </div>
         </div>
       </div>
     )
