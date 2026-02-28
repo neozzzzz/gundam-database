@@ -83,8 +83,14 @@ export default function KitDetailPage() {
 
   return (
     <div className="min-h-screen">
-      {/* 헤더 */}
-
+      <div className="max-w-7xl mx-auto px-4 pt-4 pb-8">
+        <button 
+          onClick={() => router.push('/kits')}
+          className="text-muted-foreground hover:text-foreground transition-colors text-sm"
+        >
+          ← 목록으로
+        </button>
+      </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
