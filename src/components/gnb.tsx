@@ -22,7 +22,7 @@ export function GNB() {
           <Link href="/" className="text-2xl font-bold text-gradient hover:opacity-80 transition-opacity">
             GUNDAM ARCHIVE
           </Link>
-          <nav className="flex items-center gap-4 whitespace-nowrap">
+          <nav className="flex items-center gap-4 whitespace-nowrap ml-auto">
             {navItems.map(({ href, label }) => (
               <Link
                 key={href}
