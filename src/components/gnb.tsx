@@ -83,10 +83,11 @@ export function GNB() {
                   key={href}
                   href={href}
                   onClick={() => setMenuOpen(false)}
-                  className={
+                  className={`text-lg font-bold ${
                     isActive(href)
                       ? 'text-primary'
                       : 'text-muted-foreground hover:text-foreground transition-colors'
+                  }`
                   }
                 >
                   {label}
