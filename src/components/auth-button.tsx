@@ -37,8 +37,8 @@ export function AuthButton() {
 
   if (loading) {
     return (
-      <div className="px-4 py-2 bg-secondary rounded-lg animate-pulse">
-        <div className="h-4 w-20 bg-muted-foreground/20 rounded"></div>
+      <div className="px-4 py-2 bg-secondary rounded-lg animate-pulse min-w-[80px]">
+        <div className="h-4 w-16 mx-auto bg-muted-foreground/20 rounded"></div>
       </div>
     )
   }
@@ -64,7 +64,7 @@ export function AuthButton() {
         <button
           onClick={handleSignOut}
           disabled={isSigningOut}
-          className="btn-secondary"
+          className="btn-secondary min-w-[80px]"
         >
           {isSigningOut ? '로그아웃 중...' : '로그아웃'}
         </button>
@@ -76,7 +76,7 @@ export function AuthButton() {
     <button
       onClick={handleSignIn}
       disabled={isSigningIn}
-      className="btn-primary"
+      className="btn-primary min-w-[80px]"
     >
       {isSigningIn ? '로그인 중...' : '로그인'}
     </button>

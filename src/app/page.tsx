@@ -77,20 +77,20 @@ export default function HomePage() {
       {/* 통계 섹션 */}
       <section className="max-w-7xl mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="card-threads text-center p-8">
-            <div className="text-4xl font-bold text-gradient mb-2">
+          <div className="card-threads text-center p-8 min-h-[120px]">
+            <div className="text-4xl font-bold text-gradient mb-2 h-10 flex items-center justify-center">
               {stats.kits.toLocaleString()}
             </div>
             <div className="text-muted-foreground">건담 모델</div>
           </div>
-          <div className="card-threads text-center p-8">
-            <div className="text-4xl font-bold text-gradient mb-2">
+          <div className="card-threads text-center p-8 min-h-[120px]">
+            <div className="text-4xl font-bold text-gradient mb-2 h-10 flex items-center justify-center">
               {stats.gradesBrands.toLocaleString()}
             </div>
             <div className="text-muted-foreground">등급 & 브랜드</div>
           </div>
-          <div className="card-threads text-center p-8">
-            <div className="text-4xl font-bold text-gradient mb-2">
+          <div className="card-threads text-center p-8 min-h-[120px]">
+            <div className="text-4xl font-bold text-gradient mb-2 h-10 flex items-center justify-center">
               {stats.series.toLocaleString()}
             </div>
             <div className="text-muted-foreground">시리즈</div>
