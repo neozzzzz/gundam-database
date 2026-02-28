@@ -18,11 +18,11 @@ export function GNB() {
   return (
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-black/80 border-b border-border">
       <div className="max-w-7xl mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <Link href="/" className="text-2xl font-bold text-gradient hover:opacity-80 transition-opacity">
             GUNDAM ARCHIVE
           </Link>
-          <nav className="flex items-center gap-4">
+          <nav className="flex items-center gap-4 whitespace-nowrap">
             {navItems.map(({ href, label }) => (
               <Link
                 key={href}
