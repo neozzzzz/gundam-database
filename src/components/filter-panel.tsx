@@ -255,7 +255,7 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
 
         {/* 정렬 */}
         <div className="card-threads">
-          <h3 className="font-bold mb-3">정렬</h3>
+          <div className="font-bold mb-3">정렬</div>
           <div className="space-y-2">
             <div className="relative" ref={sortDropdownRef}>
               <button
@@ -325,12 +325,12 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
         {/* 등급 (스케일 제외) */}
         {!loading && (
           <div className="card-threads">
-            <h3 className="font-bold mb-3">
+            <div className="font-bold mb-3">
               등급
               {options.grades.length === 0 && (
                 <span className="text-xs text-muted-foreground ml-2">(데이터 없음)</span>
               )}
-            </h3>
+            </div>
             <div className="flex flex-wrap gap-2">
               {options.grades.length === 0 ? (
                 <p className="text-sm text-muted-foreground">등급 데이터를 불러올 수 없습니다</p>
@@ -357,7 +357,7 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
         {/* 스케일 (등급에서 분리) */}
         {!loading && uniqueScales.length > 0 && (
           <div className="card-threads">
-            <h3 className="font-bold mb-3">스케일</h3>
+            <div className="font-bold mb-3">스케일</div>
             <div className="flex flex-wrap gap-2">
               {uniqueScales.map((scale) => (
                 <button
@@ -379,12 +379,12 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
         {/* 시리즈 - 커스텀 스크롤바 적용, 년도 표기 삭제 */}
         {!loading && (
           <div className="card-threads">
-            <h3 className="font-bold mb-3">
+            <div className="font-bold mb-3">
               시리즈
               {options.series.length === 0 && (
                 <span className="text-xs text-muted-foreground ml-2">(데이터 없음)</span>
               )}
-            </h3>
+            </div>
             {options.series.length === 0 ? (
               <p className="text-sm text-muted-foreground">시리즈 데이터를 불러올 수 없습니다</p>
             ) : (
@@ -413,7 +413,7 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
 
         {/* 가격 범위 */}
         <div className="card-threads">
-          <h3 className="font-bold mb-3">가격 범위</h3>
+          <div className="font-bold mb-3">가격 범위</div>
           <div className="space-y-2">
             <input
               type="number"
@@ -435,7 +435,7 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
         {/* 한정판 */}
         {!loading && options.limitedTypes.length > 0 && (
           <div className="card-threads">
-            <h3 className="font-bold mb-3">한정판</h3>
+            <div className="font-bold mb-3">한정판</div>
             <div className="flex flex-col gap-1.5">
               {options.limitedTypes.map((limitedType) => (
                 <button
