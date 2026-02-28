@@ -49,12 +49,12 @@ export function GNB() {
           {/* 모바일 햄버거 */}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="md:hidden flex flex-col justify-center items-center w-8 h-8 gap-1.5"
+            className="md:hidden relative flex justify-center items-center w-8 h-8"
             aria-label="메뉴"
           >
-            <span className={`block w-5 h-0.5 bg-foreground transition-all duration-300 ${menuOpen ? 'rotate-45 translate-y-[4px]' : ''}`} />
-            <span className={`block w-5 h-0.5 bg-foreground transition-all duration-300 ${menuOpen ? 'opacity-0' : ''}`} />
-            <span className={`block w-5 h-0.5 bg-foreground transition-all duration-300 ${menuOpen ? '-rotate-45 -translate-y-[4px]' : ''}`} />
+            <span className={`absolute block w-5 h-0.5 bg-foreground transition-all duration-300 ${menuOpen ? 'rotate-45' : '-translate-y-[6px]'}`} />
+            <span className={`absolute block w-5 h-0.5 bg-foreground transition-all duration-300 ${menuOpen ? 'opacity-0' : ''}`} />
+            <span className={`absolute block w-5 h-0.5 bg-foreground transition-all duration-300 ${menuOpen ? '-rotate-45' : 'translate-y-[6px]'}`} />
           </button>
         </div>
 
