@@ -38,7 +38,7 @@ export function GNB() {
                   isActive(href)
                     ? 'text-primary'
                     : 'text-muted-foreground hover:text-foreground transition-colors'
-                }`
+                }`}
               >
                 {label}
               </Link>
