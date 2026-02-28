@@ -3,11 +3,13 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
+import { useAuth } from '@/lib/auth/auth-context'
 import { AuthButton } from './auth-button'
 
 export function GNB() {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
+  const { user } = useAuth()
 
   // admin 페이지에서는 GNB 숨김
   if (pathname?.startsWith('/admin')) return null
@@ -46,7 +48,15 @@ export function GNB() {
             <AuthButton />
           </nav>
 
-          {/* 모바일 햄버거 */}
+          {/* 모바일: 아바타 + 햄버거 */}
+          <div className="md:hidden flex items-center gap-3">
+            {user?.user_metadata?.avatar_url && (
+              <img
+                src={user.user_metadata.avatar_url}
+                alt={user.user_metadata?.name || 'User'}
+                className="w-8 h-8 rounded-full"
+              />
+            )}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
             className="md:hidden relative flex justify-center items-center w-8 h-8"
@@ -56,6 +66,7 @@ export function GNB() {
             <span className={`absolute block w-5 h-0.5 bg-foreground transition-all duration-300 ${menuOpen ? 'opacity-0' : ''}`} />
             <span className={`absolute block w-5 h-0.5 bg-foreground transition-all duration-300 ${menuOpen ? '-rotate-45' : 'translate-y-[6px]'}`} />
           </button>
+          </div>
         </div>
 
         {/* 모바일 메뉴 */}
