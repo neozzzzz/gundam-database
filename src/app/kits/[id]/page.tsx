@@ -86,7 +86,7 @@ export default function KitDetailPage() {
       <div className="max-w-7xl mx-auto px-4 pt-4 pb-8">
         <button 
           onClick={() => router.push('/kits')}
-          className="text-muted-foreground hover:text-foreground transition-colors text-sm"
+          className="text-muted-foreground hover:text-foreground transition-colors text-[12px]"
         >
           ← 목록으로
         </button>
