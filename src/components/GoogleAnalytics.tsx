@@ -7,7 +7,7 @@ import Script from 'next/script'
 // 사용법: layout.tsx에서 <GoogleAnalytics /> 추가
 // ============================================
 
-const GA_TRACKING_ID = 'G-MXRTV6SC31'
+const GA_TRACKING_ID = 'G-JYBGGG47JQ'
 
 export default function GoogleAnalytics() {
   return (
