@@ -51,7 +51,7 @@ export default function HomePage() {
       <section className="max-w-7xl mx-auto px-4 py-20">
         <div className="text-center space-y-6 animate-fade-in">
           <h2 className="text-5xl font-bold">
-            반다이 건담 모델
+            건담과 프라모델
             <br />
             <span className="text-gradient">모든 정보를 한곳에</span>
           </h2>
