@@ -5,7 +5,6 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { AuthButton } from '@/components/auth-button'
 import { useAuth } from '@/lib/auth/auth-context'
 
 interface Stats {
@@ -46,21 +45,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen">
       {/* 헤더 */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-black/80 border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gradient">
-              GUNDAM ARCHIVE
-            </h1>
-            <nav className="flex items-center gap-4">
-              <Link href="/kits" className="text-muted-foreground hover:text-foreground transition-colors">
-                모델 탐색
-              </Link>
-              <AuthButton />
-            </nav>
-          </div>
-        </div>
-      </header>
+
 
       {/* 히어로 섹션 */}
       <section className="max-w-7xl mx-auto px-4 py-20">

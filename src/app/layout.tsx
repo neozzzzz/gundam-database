@@ -4,6 +4,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { Providers } from '@/components/providers'
+import { GNB } from '@/components/gnb'
 import './globals.css'
 import { Analytics } from "@vercel/analytics/react"
 import GoogleAnalytics from '@/components/GoogleAnalytics'
@@ -29,6 +30,7 @@ export default function RootLayout({
     <html lang="ko" className="dark">
       <body className={`${inter.className} bg-black text-white antialiased`}>
         <Providers>
+          <GNB />
           {children}
         </Providers>
         <Analytics />

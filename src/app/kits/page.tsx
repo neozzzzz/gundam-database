@@ -8,7 +8,7 @@ import { KitCard } from '@/components/kit-card'
 import { SearchBar } from '@/components/search-bar'
 import { FilterPanel } from '@/components/filter-panel'
 import { Pagination } from '@/components/pagination'
-import { AuthButton } from '@/components/auth-button'
+
 import type { KitListItem, PaginatedResponse } from '@/lib/types'
 
 export default function KitsPage() {
@@ -86,26 +86,7 @@ export default function KitsPage() {
   return (
     <div className="min-h-screen">
       {/* 헤더 */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-black/80 border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold">
-              <a href="/" className="hover:text-primary transition-colors">
-                GUNDAM ARCHIVE
-              </a>
-            </h1>
-            <div className="flex items-center gap-4">
-              <a href="/kits" className="text-primary">
-                모델 목록
-              </a>
-              <a href="/" className="text-muted-foreground hover:text-foreground transition-colors">
-                홈
-              </a>
-              <AuthButton />
-            </div>
-          </div>
-        </div>
-      </header>
+
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">

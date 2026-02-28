@@ -84,23 +84,7 @@ export default function KitDetailPage() {
   return (
     <div className="min-h-screen">
       {/* 헤더 */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-black/80 border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => router.push('/kits')}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              ← 돌아가기
-            </button>
-            <h1 className="text-2xl font-bold">
-              <a href="/" className="hover:text-primary transition-colors">
-                GUNDAM ARCHIVE
-              </a>
-            </h1>
-          </div>
-        </div>
-      </header>
+
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
