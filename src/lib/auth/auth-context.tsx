@@ -47,10 +47,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signInWithGoogle = async () => {
+    // 로그인 후 돌아올 경로를 localStorage에 저장
+    localStorage.setItem('auth-redirect', window.location.pathname)
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(window.location.pathname)}`,
+        redirectTo: `${window.location.origin}/auth/callback`,
       },
     })
     if (error) {
@@ -97,8 +99,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       })
       
-      // 페이지 새로고침으로 완전히 초기화
-      window.location.href = '/'
+      // 현재 페이지에서 새로고침으로 초기화
+      window.location.reload()
     }
   }
 

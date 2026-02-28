@@ -15,18 +15,19 @@ export async function GET(request: Request) {
       await supabase.auth.exchangeCodeForSession(code)
     }
 
-    // 클라이언트 사이드 리다이렉트 (쿠키 설정 시간 확보)
-    const redirectUrl = new URL(next, requestUrl.origin).toString()
-    
+    // 클라이언트 사이드 리다이렉트 (localStorage에서 원래 경로 복원)
     return new NextResponse(
       `<!DOCTYPE html>
       <html>
         <head>
-          <meta http-equiv="refresh" content="0;url=${redirectUrl}">
-          <script>window.location.href="${redirectUrl}";</script>
+          <script>
+            var next = localStorage.getItem('auth-redirect') || '/';
+            localStorage.removeItem('auth-redirect');
+            window.location.href = next;
+          </script>
         </head>
         <body>
-          <p>로그인 처리 중... 자동으로 이동하지 않으면 <a href="${redirectUrl}">여기</a>를 클릭하세요.</p>
+          <p>로그인 처리 중...</p>
         </body>
       </html>`,
       {
