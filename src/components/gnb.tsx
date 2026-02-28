@@ -60,24 +60,24 @@ export function GNB() {
 
         {/* 모바일 메뉴 */}
         {menuOpen && (
-          <nav className="md:hidden mt-4 pt-4 border-t border-border flex flex-col items-end gap-3">
-            {navItems.map(({ href, label }) => (
-              <Link
-                key={href}
-                href={href}
-                onClick={() => setMenuOpen(false)}
-                className={
-                  isActive(href)
-                    ? 'text-primary'
-                    : 'text-muted-foreground hover:text-foreground transition-colors'
-                }
-              >
-                {label}
-              </Link>
-            ))}
-            <div className="pt-2">
-              <AuthButton />
+          <nav className="md:hidden mt-4 pt-4 border-t border-border flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {navItems.map(({ href, label }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={() => setMenuOpen(false)}
+                  className={
+                    isActive(href)
+                      ? 'text-primary'
+                      : 'text-muted-foreground hover:text-foreground transition-colors'
+                  }
+                >
+                  {label}
+                </Link>
+              ))}
             </div>
+            <AuthButton />
           </nav>
         )}
       </div>
