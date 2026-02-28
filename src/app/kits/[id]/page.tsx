@@ -518,9 +518,10 @@ export default function KitDetailPage() {
               </h3>
               <button 
                 onClick={() => setShowPilotModal(false)}
-                className="text-muted-foreground hover:text-foreground transition-colors text-2xl leading-none"
+                className="relative flex justify-center items-center w-8 h-8 text-muted-foreground hover:text-foreground transition-colors"
               >
-                ×
+                <span className="absolute block w-5 h-0.5 bg-current rotate-45" />
+                <span className="absolute block w-5 h-0.5 bg-current -rotate-45" />
               </button>
             </div>
             
