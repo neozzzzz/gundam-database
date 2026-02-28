@@ -60,7 +60,7 @@ export function GNB() {
 
         {/* 모바일 메뉴 */}
         {menuOpen && (
-          <nav className="md:hidden mt-4 pt-4 border-t border-border flex items-center justify-between pl-2">
+          <nav className="md:hidden mt-4 pt-4 border-t border-border flex items-center justify-between pl-4">
             <div className="flex items-center gap-4">
               {navItems.map(({ href, label }) => (
                 <Link
