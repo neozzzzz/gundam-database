@@ -34,7 +34,7 @@ export function GNB() {
               <Link
                 key={href}
                 href={href}
-                className={`text-lg ${
+                className={`text-lg font-bold ${
                   isActive(href)
                     ? 'text-primary'
                     : 'text-muted-foreground hover:text-foreground transition-colors'
