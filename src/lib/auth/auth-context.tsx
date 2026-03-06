@@ -3,7 +3,7 @@
 
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 
@@ -17,56 +17,52 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+// 모듈 레벨 싱글톤 — 렌더 사이클과 무관
+const supabase = createClient()
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const supabase = useMemo(() => createClient(), [])
-
-  const loadAdminRole = useCallback(async (userId: string | null | undefined) => {
-    if (!userId) {
-      setIsAdmin(false)
-      return
-    }
-
-    const { data, error } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', userId)
-      .single()
-
-    if (error) {
-      setIsAdmin(false)
-      return
-    }
-
-    setIsAdmin(data?.role === 'admin')
-  }, [supabase])
+  const initialized = useRef(false)
 
   useEffect(() => {
+    if (initialized.current) return
+    initialized.current = true
+
+    // admin role 조회
+    const checkAdminRole = async (userId: string | null | undefined) => {
+      if (!userId) {
+        setIsAdmin(false)
+        return
+      }
+      const { data } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', userId)
+        .single()
+      setIsAdmin(data?.role === 'admin')
+    }
+
     // 초기 세션 확인
     supabase.auth.getSession().then(({ data: { session } }) => {
-      const nextUser = session?.user ?? null
-      setUser(nextUser)
+      const u = session?.user ?? null
+      setUser(u)
       setLoading(false)
-      loadAdminRole(nextUser?.id)
+      checkAdminRole(u?.id)
     })
 
     // 인증 상태 변경 감지
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const nextUser = session?.user ?? null
-      setUser(nextUser)
-      await loadAdminRole(nextUser?.id)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const u = session?.user ?? null
+      setUser(u)
+      checkAdminRole(u?.id)
     })
 
     return () => subscription.unsubscribe()
-  }, [loadAdminRole, supabase])
+  }, [])
 
   const signInWithGoogle = async () => {
-    // 로그인 후 돌아올 경로를 localStorage에 저장
     localStorage.setItem('auth-redirect', window.location.pathname)
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -74,52 +70,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     })
-    if (error) {
-      console.error('Error signing in:', error)
-      throw error
-    }
+    if (error) throw error
   }
 
   const signOut = async () => {
-    // 먼저 user 상태 초기화
     setUser(null)
     setIsAdmin(false)
     
     try {
-      // scope: 'local'로 시도
       await supabase.auth.signOut({ scope: 'local' })
-    } catch (error) {
-      // 에러 발생해도 무시 - 로컬 상태는 이미 초기화됨
-      console.log('SignOut API error (ignored):', error)
+    } catch {
+      // ignore
     }
     
-    // 브라우저 스토리지 강제 삭제
     if (typeof window !== 'undefined') {
-      // 로컬 스토리지
-      const localKeys = Object.keys(localStorage)
-      localKeys.forEach(key => {
-        if (key.startsWith('sb-') || key.includes('supabase')) {
-          localStorage.removeItem(key)
-        }
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-') || key.includes('supabase')) localStorage.removeItem(key)
       })
-      
-      // 세션 스토리지
-      const sessionKeys = Object.keys(sessionStorage)
-      sessionKeys.forEach(key => {
-        if (key.startsWith('sb-') || key.includes('supabase')) {
-          sessionStorage.removeItem(key)
-        }
+      Object.keys(sessionStorage).forEach(key => {
+        if (key.startsWith('sb-') || key.includes('supabase')) sessionStorage.removeItem(key)
       })
-      
-      // 쿠키 삭제 (supabase 관련)
-      document.cookie.split(';').forEach(cookie => {
-        const name = cookie.split('=')[0].trim()
-        if (name.startsWith('sb-') || name.includes('supabase') || name.includes('auth')) {
-          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
-        }
-      })
-      
-      // 현재 페이지에서 새로고침으로 초기화
       window.location.reload()
     }
   }
