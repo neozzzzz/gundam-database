@@ -2,7 +2,10 @@
 // 루트 레이아웃 - Threads 스타일 다크모드
 
 import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
 import { Providers } from '@/components/providers'
+
+const inter = Inter({ subsets: ['latin'] })
 import { GNB } from '@/components/gnb'
 import './globals.css'
 import { Analytics } from "@vercel/analytics/react"
@@ -24,7 +27,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko" className="dark">
-      <body className="bg-black text-white antialiased">
+      <body className={`${inter.className} bg-black text-white antialiased`}>
         <Providers>
           <GNB />
           {children}
