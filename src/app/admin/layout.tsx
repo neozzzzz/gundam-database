@@ -1,22 +1,13 @@
-import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
-const ADMIN_LOGIN_PATH = '/admin/login'
+const ADMIN_LOGIN_PATH = '/admin-login'
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const requestHeaders = await headers()
-  const nextUrl = requestHeaders.get('next-url') ?? requestHeaders.get('x-pathname') ?? ''
-  const isLoginPage = nextUrl.startsWith(ADMIN_LOGIN_PATH)
-
-  if (isLoginPage) {
-    return <>{children}</>
-  }
-
   const supabase = await createClient()
   const {
     data: { user },
